@@ -10,7 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Quicksand:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>body{font-family:Quicksand,sans-serif}.font-handwriting{font-family:Caveat,cursive}</style>
+  <style>
+    body { font-family: 'Quicksand', sans-serif; }
+    .font-handwriting { font-family: 'Caveat', cursive; }
+  </style>
   <!-- Vue.js 3 Production CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
@@ -33,7 +36,7 @@
         <div class="flex items-center gap-2">
           <!-- GAS status & sync button -->
           <div class="flex items-center gap-1.5">
-            <button @click="openGasModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
+            <button v-if="isAdmin" @click="openGasModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
               :class="profile.gasUrl ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
               <span class="w-2 h-2 rounded-full" :class="profile.gasUrl ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"></span>
               <span>{{ profile.gasUrl ? 'Cloud: Đã kết nối' : 'Kết nối Google Sheets' }}</span>
@@ -45,7 +48,7 @@
           </div>
 
           <!-- Add memory button -->
-          <button @click="openAddMemoryModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs sm:text-sm font-bold shadow-xs hover:from-rose-600 hover:to-pink-600 transition-all">
+          <button v-if="isAdmin" @click="openAddMemoryModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs sm:text-sm font-bold shadow-xs hover:from-rose-600 hover:to-pink-600 transition-all">
             + Thêm kỷ niệm
           </button>
 
@@ -64,8 +67,8 @@
             🔒 Quản trị
           </button>
 
-          <!-- Settings -->
-          <button @click="openSettingsModal = true" class="p-2 rounded-xl text-stone-500 hover:bg-stone-100" title="Cài đặt">
+          <!-- Settings (chỉ quản trị viên) -->
+          <button v-if="isAdmin" @click="openSettingsModal = true" class="p-2 rounded-xl text-stone-500 hover:bg-stone-100" title="Cài đặt">
             ⚙️
           </button>
         </div>
@@ -659,10 +662,10 @@
         const profile = ref({
           "nickname": "Tít",
           "parentNames": "Ba Ngoãn & Mẹ Linh",
-          "birthDate": "2027-12-06",
-          "dueDate": "2027-01-01",
+          "birthDate": "2027-06-17",
+          "dueDate": "2027-06-17",
           "avatar": "https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80",
-          "quote": "Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Ngoan & Bố Linh (2027)",
+          "quote": "Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Linh & Bố Ngoãn (2027)",
           "adminPassword": "123",
           "gasUrl": "https://script.google.com/macros/s/AKfycbxchZ3lgCdzufphWhML6_pUwYEbUk4Pg8z7FH_YEhF0-CfJG0CdvcnrnU7VMW_hCt6e/exec"
 });
@@ -1168,6 +1171,9 @@
 
         const logoutAdmin = () => {
           isAdmin.value = false;
+          openSettingsModal.value = false;
+          openGasModal.value = false;
+          showAddEditModal.value = false;
           showToast('Đã đăng xuất quyền quản trị.');
         };
 
