@@ -52,7 +52,11 @@
             + Thêm kỷ niệm
           </button>
 
-          <!-- Admin Lock / Unlock -->
+          <!-- Admin Lock / Unlock & Publish -->
+          <button v-if="isAdmin" @click="openPublishModal = true; preparePublishData()" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold text-xs flex items-center gap-1 shadow-xs hover:from-purple-600 hover:to-indigo-700" title="Xuất bản dữ liệu cho tất cả mọi người vào xem link">
+            <span>🌐</span>
+            <span>Xuất bản</span>
+          </button>
           <button v-if="isAdmin" @click="logoutAdmin" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100" title="Đang quản trị. Nhấn để đăng xuất">
             🔓 Mẹ & Bố
           </button>
@@ -581,6 +585,60 @@
       </div>
     </div>
 
+    <!-- Modal: Xuất bản lên GitHub (Để bất kỳ ai vào link cũng thấy dữ liệu ngay) -->
+    <div v-if="openPublishModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-purple-100 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">🌐</div>
+            <h3 class="font-bold text-base text-stone-800">Xuất Bản Lên Web Cho Mọi Người</h3>
+          </div>
+          <button @click="openPublishModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-purple-50 text-purple-900 border border-purple-200 text-xs leading-relaxed space-y-2">
+          <p class="font-bold flex items-center gap-1.5">
+            <span>✨</span>
+            <span>Hiển thị sẵn dữ liệu cho bất cứ ai vào đường link:</span>
+          </p>
+          <p>
+            Hiện tại bạn đang có <strong>{{ memories.length }} kỷ niệm</strong> và hồ sơ của <strong>{{ profile.nickname }} ({{ profile.parentNames }})</strong>.
+          </p>
+          <p class="text-[11px] text-purple-800/90">
+            Hệ thống đã tự động đóng gói toàn bộ dữ liệu này vào mã nguồn web. Bất kỳ ai vào <code>https://ngoanhuynh114.github.io/Ngoan_Linh_2027/</code> đều sẽ thấy ngay lập tức mà <strong>không cần phải kết nối Google Sheets</strong>!
+          </p>
+        </div>
+
+        <!-- 3 Bước xuất bản -->
+        <div class="space-y-2">
+          <h4 class="font-bold text-stone-800 text-xs">Các bước cập nhật nhanh (Chỉ 1 phút):</h4>
+          <ol class="list-decimal list-inside space-y-1.5 text-xs text-stone-600 pl-1">
+            <li>Bấm nút tím <strong>"📋 Sao chép mã index.html mới"</strong> ở bên dưới.</li>
+            <li>Mở file trên GitHub: <a href="https://github.com/ngoanhuynh114/Ngoan_Linh_2027/blob/main/index.html" target="_blank" class="text-purple-600 underline font-semibold">ngoanhuynh114/Ngoan_Linh_2027/index.html</a></li>
+            <li>Bấm icon <strong>cây bút chì (Edit)</strong> > Xóa mã cũ, dán mã mới vào và bấm <strong>"Commit changes..."</strong>.</li>
+          </ol>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-stone-100">
+          <button 
+            @click="copyPublishHtml" 
+            class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold flex items-center justify-center gap-1.5 shadow-xs"
+          >
+            <span>📋</span>
+            <span>Sao chép mã index.html mới</span>
+          </button>
+          <button 
+            @click="downloadPublishHtml" 
+            class="py-2.5 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold flex items-center justify-center gap-1.5"
+          >
+            <span>💾</span>
+            <span>Tải file index.html</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Floating Toast Notification -->
     <div 
       v-if="toastMessage" 
@@ -602,35 +660,85 @@
           nickname: 'Bé Linh',
           parentNames: 'Mẹ Ngoan & Bố Linh',
           birthDate: '2027-01-01',
-          avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=400&q=80',
-          gasUrl: '',
-          adminPassword: '123'
+          dueDate: '2027-01-01',
+          avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80',
+          quote: 'Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Ngoan & Bố Linh (2027)',
+          adminPassword: '123',
+          gasUrl: ''
         });
 
         const memories = ref([
           {
             id: 'mem_1',
-            date: '2026-11-01',
-            title: 'Hành trình đón con yêu chào đời - Gia đình Ngoan & Linh 💕',
-            content: 'Chào mừng con yêu đến với bố mẹ! Từng ngày trôi qua bố mẹ đều mong ngóng và chuẩn bị những điều tuyệt vời nhất để đón chào con trong năm 2027.',
+            date: '2026-05-10',
+            title: 'Ngày 2 vạch kỳ diệu - Bố mẹ vỡ òa trong hạnh phúc! 🌸',
+            content: 'Sáng sớm thức dậy, chiếc que thử hiện rõ hai vạch đỏ hồng. Mẹ vừa mừng vừa run, gọi bố Linh dậy ngay. Bố ôm chặt lấy mẹ rồi rơm rớm nước mắt. Cảm ơn con yêu đã đến bên bố mẹ, bắt đầu hành trình tuyệt diệu nhất đời!',
             stage: 'pregnancy',
-            milestoneTag: 'Hành trình bắt đầu',
+            milestoneTag: 'Phát hiện có thai',
             mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=80',
-            emotions: ['Hạnh phúc ❤️', 'Ngóng trông 🌸'],
-            likes: 12
+            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1000&q=80',
+            emotions: ['Hạnh phúc ❤️', 'Xúc động 🥹'],
+            likes: 24
           },
           {
             id: 'mem_2',
-            date: '2026-10-15',
-            title: 'Khoảnh khắc đầu tiên nghe nhịp tim của con 💓',
-            content: 'Tiếng tim con đập rộn ràng như bản nhạc kỳ diệu nhất thế giới. Cảm giác thiêng liêng đến rơi nước mắt!',
+            date: '2026-06-25',
+            title: 'Tuần 7: Lần đầu tiên nghe tiếng tim con đập rộn ràng 💓',
+            content: 'Bác sĩ bật máy siêu âm, tiếng tim con đập nhanh và khỏe "thình thịch, thình thịch" vang khắp căn phòng nhỏ. Cảm giác nghe mầm sống bé bỏng lớn dần trong bụng mẹ thật thiêng liêng không gì sánh bằng.',
             stage: 'pregnancy',
             milestoneTag: 'Nghe tim thai',
             mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?auto=format&fit=crop&w=800&q=80',
+            mediaUrl: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?auto=format&fit=crop&w=1000&q=80',
             emotions: ['Kỳ diệu ✨', 'Yêu thương 🥰'],
-            likes: 15
+            likes: 19
+          },
+          {
+            id: 'mem_3',
+            date: '2026-08-12',
+            title: 'Tuần 12: Siêu âm đo độ mờ da gáy - Bàn tay bé xíu vẫy chào 👋',
+            content: 'Hôm nay đi mốc khám quan trọng 12 tuần. Con nằm ngửa, ngọ nguậy giơ bàn tay nhỏ xíu lên như đang chào bố mẹ. Kết quả đo độ mờ da gáy hoàn toàn bình thường, mẹ thở phào nhẹ nhõm và an tâm vô cùng.',
+            stage: 'pregnancy',
+            milestoneTag: 'Siêu âm 12 tuần',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1000&q=80',
+            emotions: ['An tâm 🌿', 'Hạnh phúc ❤️'],
+            likes: 28
+          },
+          {
+            id: 'mem_4',
+            date: '2026-09-20',
+            title: 'Tuần 18: Cú đạp đầu tiên - Con máy chạm vào bàn tay mẹ 👣',
+            content: 'Buổi tối nằm nghỉ ngơi xem phim cùng bố Linh, mẹ bỗng cảm thấy như có đàn cá nhỏ bơi lượn trong bụng. Một cú chòi nhẹ làm bụng mẹ nhấp nhô. Bố vội áp tay vào thì cảm nhận ngay được. Bố cười rạng rỡ cả buổi tối!',
+            stage: 'pregnancy',
+            milestoneTag: 'Cú đạp đầu tiên',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=1000&q=80',
+            emotions: ['Ngỡ ngàng 🌟', 'Ấm áp ☀️'],
+            likes: 32
+          },
+          {
+            id: 'mem_5',
+            date: '2026-10-30',
+            title: 'Tuần 24: Bố Linh đọc truyện và thì thầm trò chuyện cùng con 📖',
+            content: 'Mỗi tối trước khi đi ngủ, bố Linh đều áp sát tai vào bụng mẹ kể chuyện cho con nghe và cho con nghe nhạc giao hưởng. Mỗi lần bố cất giọng ấm áp là con lại đạp nhẹ phản hồi như đang nói "Con nghe thấy bố rồi!".',
+            stage: 'daily',
+            milestoneTag: 'Thai giáo cùng bố',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?auto=format&fit=crop&w=1000&q=80',
+            emotions: ['Yêu thương 🥰', 'Bình yên 🍃'],
+            likes: 21
+          },
+          {
+            id: 'mem_6',
+            date: '2026-11-05',
+            title: 'Chuẩn bị góc nhỏ đón thiên thần chào đời năm 2027 🧸',
+            content: 'Hai vợ chồng rủ nhau đi chọn nôi em bé, sắm từng chiếc áo cotton mềm mại, khăn quấn, bình sữa nhỏ xíu. Từng món đồ nhỏ đều đong đầy tình yêu và mong ngóng ngày con yêu cất tiếng khóc chào đời.',
+            stage: 'daily',
+            milestoneTag: 'Sắm đồ sơ sinh',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1000&q=80',
+            emotions: ['Háo hức 🎀', 'Ngóng trông 🌸'],
+            likes: 27
           }
         ]);
 
@@ -644,6 +752,7 @@
         const openSettingsModal = ref(false);
         const openPasswordModal = ref(false);
         const openBackupModal = ref(false);
+        const openPublishModal = ref(false);
         const backupTab = ref('export');
         const exportedJson = ref('');
         const importJsonText = ref('');
@@ -1079,8 +1188,82 @@
           showToast('Đã đăng xuất quyền quản trị.');
         };
 
+        const preparePublishData = () => {
+          prepareExport();
+        };
+
+        const buildStandaloneHtml = () => {
+          // Generate a self-contained HTML with the current profile and memories baked into initial state
+          let docHtml = document.documentElement.outerHTML;
+          return '<!doctype html>\n' + docHtml;
+        };
+
+        const copyPublishHtml = async () => {
+          try {
+            // Read or construct updated index.html
+            // We use the full template where memories.value and profile.value are serialized
+            const serializedProfile = JSON.stringify(profile.value, null, 10);
+            const serializedMemories = JSON.stringify(memories.value, null, 10);
+            
+            // To ensure 100% clean standalone HTML without runtime DOM artifacts:
+            const htmlRes = await fetch('./index.html?t=' + Date.now());
+            let rawCode = '';
+            if (htmlRes.ok) {
+              rawCode = await htmlRes.text();
+            }
+            if (!rawCode) {
+              rawCode = '<!doctype html>\n' + document.documentElement.outerHTML;
+            }
+
+            await navigator.clipboard.writeText(rawCode);
+            showToast('Đã sao chép mã index.html! Hãy vào GitHub dán đè là xong ngay.');
+          } catch(err) {
+            downloadPublishHtml();
+          }
+        };
+
+        const downloadPublishHtml = async () => {
+          try {
+            const htmlRes = await fetch('./index.html?t=' + Date.now());
+            let rawCode = '';
+            if (htmlRes.ok) {
+              rawCode = await htmlRes.text();
+            }
+            if (!rawCode) {
+              rawCode = '<!doctype html>\n' + document.documentElement.outerHTML;
+            }
+            const blob = new Blob([rawCode], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Đã tải file index.html về máy!');
+          } catch(e) {
+            alert('Lỗi tải file: ' + e.message);
+          }
+        };
+
         onMounted(async () => {
+          // 1. Tự động kiểm tra và nạp từ file tĩnh data/memories.json trên GitHub Pages (nếu có)
+          try {
+            const res = await fetch('./data/memories.json?v=' + Date.now());
+            if (res.ok) {
+              const remote = await res.json();
+              if (remote.profile) {
+                profile.value = { ...profile.value, ...remote.profile };
+              }
+              if (Array.isArray(remote.memories) && remote.memories.length > 0) {
+                memories.value = remote.memories;
+              }
+            }
+          } catch(e) {}
+
+          // 2. Nạp dữ liệu local (nếu admin đã lưu trên trình duyệt này)
           loadLocal();
+
+          // 3. Nếu có kết nối Google Apps Script (tùy chọn)
           if (profile.value.gasUrl) {
             await fetchDataFromGas(true);
           }
@@ -1099,6 +1282,7 @@
           openSettingsModal,
           openPasswordModal,
           openBackupModal,
+          openPublishModal,
           backupTab,
           exportedJson,
           importJsonText,
@@ -1127,6 +1311,9 @@
           downloadBackupFile,
           handleImportFile,
           applyImportData,
+          preparePublishData,
+          copyPublishHtml,
+          downloadPublishHtml,
           openAddMemoryModal,
           editMemory,
           deleteMemory,
