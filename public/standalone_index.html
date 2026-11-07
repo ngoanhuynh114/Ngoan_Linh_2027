@@ -654,6 +654,9 @@
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
+    // CẤU HÌNH LIÊN KẾT GOOGLE APPS SCRIPT CHO MỌI THIẾT BỊ (SAFARI, EDGE, CHROME, IPHONE, ANDROID...):
+    const DEFAULT_GAS_URL = "";
+
     createApp({
       setup() {
         const profile = ref({
@@ -664,7 +667,7 @@
           avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80',
           quote: 'Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Ngoan & Bố Linh (2027)',
           adminPassword: '123',
-          gasUrl: ''
+          gasUrl: DEFAULT_GAS_URL || ''
         });
 
         const memories = ref([
@@ -886,16 +889,24 @@
         };
 
         const fetchDataFromGas = async (silent = false) => {
-          if (!profile.value.gasUrl || !profile.value.gasUrl.trim()) return;
+          const targetUrl = (profile.value.gasUrl || DEFAULT_GAS_URL || '').trim();
+          if (!targetUrl) return;
           try {
             isSyncing.value = true;
             if (!silent) showToast('Đang kết nối & tải dữ liệu từ Google Sheets...', 'info');
-            const cleanUrl = profile.value.gasUrl.trim();
+            const cleanUrl = targetUrl;
             const fetchUrl = cleanUrl.includes('?') 
-              ? `${cleanUrl}&action=getMemories` 
-              : `${cleanUrl}?action=getMemories`;
+              ? `${cleanUrl}&action=getMemories&_t=${Date.now()}` 
+              : `${cleanUrl}?action=getMemories&_t=${Date.now()}`;
             
-            const res = await fetch(fetchUrl);
+            const res = await fetch(fetchUrl, {
+              method: 'GET',
+              mode: 'cors',
+              redirect: 'follow',
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
             const json = await res.json();
             
             if (json.status === 'success') {
@@ -1225,6 +1236,12 @@
             code = code.replace(memoriesRegex, `const memories = ref(${memoriesJson});`);
           }
 
+          // Bake Google Apps Script Web App URL into DEFAULT_GAS_URL so Safari, Edge, and all visitors auto-connect
+          const currentGasUrl = (profile.value.gasUrl || DEFAULT_GAS_URL || '').trim();
+          if (currentGasUrl) {
+            code = code.replace(/const DEFAULT_GAS_URL = ["'][^"']*["'];/, `const DEFAULT_GAS_URL = "${currentGasUrl}";`);
+          }
+
           return code;
         };
 
@@ -1232,7 +1249,7 @@
           try {
             const code = await getExportHtml();
             await navigator.clipboard.writeText(code);
-            showToast('Đã sao chép mã index.html chứa đầy đủ dữ liệu riêng của bạn! Hãy dán đè lên GitHub.');
+            showToast('Đã sao chép mã index.html mới! Hãy vào GitHub dán đè để Edge và Safari tự động nhận dữ liệu.');
           } catch(err) {
             downloadPublishHtml();
           }
@@ -1248,14 +1265,22 @@
             a.download = 'index.html';
             a.click();
             URL.revokeObjectURL(url);
-            showToast('Đã tải file index.html chứa dữ liệu riêng của bạn về máy!');
+            showToast('Đã tải file index.html mới về máy!');
           } catch(e) {
             alert('Lỗi tải file: ' + e.message);
           }
         };
 
         onMounted(async () => {
-          // 1. Tự động kiểm tra và nạp từ file tĩnh data/memories.json trên GitHub Pages (nếu có)
+          // 1. Nạp dữ liệu local (nếu trình duyệt này đã lưu)
+          loadLocal();
+
+          // 2. Áp dụng DEFAULT_GAS_URL nếu local chưa có
+          if (!profile.value.gasUrl && DEFAULT_GAS_URL) {
+            profile.value.gasUrl = DEFAULT_GAS_URL;
+          }
+
+          // 3. Tự động kiểm tra và nạp từ file tĩnh data/memories.json trên GitHub Pages (nếu có)
           try {
             const res = await fetch('./data/memories.json?v=' + Date.now());
             if (res.ok) {
@@ -1269,10 +1294,7 @@
             }
           } catch(e) {}
 
-          // 2. Nạp dữ liệu local (nếu admin đã lưu trên trình duyệt này)
-          loadLocal();
-
-          // 3. Nếu có kết nối Google Apps Script (tùy chọn)
+          // 4. Tự động kết nối Google Sheets (tải dữ liệu Google Drive & Sheets cho MỌI trình duyệt: Safari, Edge, Chrome, iPhone...)
           if (profile.value.gasUrl) {
             await fetchDataFromGas(true);
           }
