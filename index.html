@@ -34,12 +34,18 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- GAS status button -->
-          <button @click="openGasModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
-            :class="profile.gasUrl ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
-            <span class="w-2 h-2 rounded-full" :class="profile.gasUrl ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"></span>
-            <span>{{ profile.gasUrl ? 'Google Sheets: Kết nối' : 'Kết nối Google Sheets' }}</span>
-          </button>
+          <!-- GAS status & sync button -->
+          <div class="flex items-center gap-1.5">
+            <button @click="openGasModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
+              :class="profile.gasUrl ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
+              <span class="w-2 h-2 rounded-full" :class="profile.gasUrl ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"></span>
+              <span>{{ profile.gasUrl ? 'Cloud: Đã kết nối' : 'Kết nối Google Sheets' }}</span>
+            </button>
+            <button v-if="profile.gasUrl" @click="fetchDataFromGas(false)" :disabled="isSyncing" class="px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800 font-semibold flex items-center gap-1 transition-colors" title="Bấm để tải lại dữ liệu mới nhất từ Google Sheets">
+              <span :class="{'animate-spin inline-block': isSyncing}">🔄</span>
+              <span class="hidden md:inline">{{ isSyncing ? 'Đang tải...' : 'Đồng bộ' }}</span>
+            </button>
+          </div>
 
           <!-- Add memory button -->
           <button @click="openAddMemoryModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs sm:text-sm font-bold shadow-xs hover:from-rose-600 hover:to-pink-600 transition-all">
@@ -265,13 +271,43 @@
 
     <!-- Modal: GAS Configuration -->
     <div v-if="openGasModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
-        <h3 class="font-bold text-base text-stone-800">Cấu hình Google Apps Script</h3>
-        <p class="text-xs text-stone-600">Dán Web App URL (có đuôi /exec) từ Apps Script đã deploy để đồng bộ tự động với Google Sheets và Google Drive:</p>
-        <input type="url" v-model="tempGasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 rounded-xl border border-stone-200 text-xs font-mono">
-        <div class="flex justify-end gap-2 pt-2">
-          <button @click="openGasModal = false" class="px-4 py-2 text-xs rounded-xl text-stone-600">Đóng</button>
-          <button @click="saveGasUrl" class="px-4 py-2 text-xs rounded-xl bg-rose-500 text-white font-bold">Lưu cấu hình</button>
+      <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm">
+        <div class="flex items-center justify-between border-b border-rose-100 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">☁️</div>
+            <h3 class="font-bold text-base text-stone-800">Đồng Bộ Cloud (Google Apps Script)</h3>
+          </div>
+          <button @click="openGasModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 text-xs leading-relaxed space-y-1">
+          <p class="font-semibold">💡 Tại sao cần Google Apps Script?</p>
+          <p>Khi bạn kết nối Google Apps Script, tất cả nhật ký, hình ảnh và hồ sơ của bé sẽ được lưu trữ vĩnh viễn trên <strong>Google Sheets</strong> và <strong>Google Drive</strong> của bạn. Bất kỳ người thân nào vào xem link <code>ngoanhuynh114.github.io/Ngoan_Linh_2027/</code> đều sẽ nhìn thấy dữ liệu mới nhất!</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-stone-700">Web App URL (kết thúc bằng /exec):</label>
+          <input 
+            type="url" 
+            v-model="tempGasUrl" 
+            placeholder="https://script.google.com/macros/s/.../exec" 
+            class="w-full p-2.5 rounded-xl border border-stone-200 text-xs font-mono focus:border-rose-400 focus:outline-hidden"
+          >
+        </div>
+
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-stone-100">
+          <button @click="openGasModal = false" class="px-4 py-2 text-xs rounded-xl text-stone-500 hover:bg-stone-100">Đóng</button>
+          <div class="flex gap-2">
+            <button 
+              type="button" 
+              @click="saveGasUrl" 
+              :disabled="isSyncing"
+              class="px-5 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center gap-1.5"
+            >
+              <span :class="{'animate-spin inline-block': isSyncing}">🔄</span>
+              <span>Lưu & Đồng bộ ngay</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -393,25 +429,53 @@
 
     <!-- Modal: Settings (Cài đặt thông tin bé & Quản trị) -->
     <div v-if="openSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm">
+      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-rose-100 pb-3">
-          <h3 class="font-bold text-base text-stone-800">Cài đặt thông tin bé</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚙️</span>
+            <h3 class="font-bold text-base text-stone-800">Cài đặt thông tin bé</h3>
+          </div>
           <button @click="openSettingsModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
         </div>
 
         <div>
-          <label class="block font-semibold mb-1 text-stone-700">Tên bé (Nickname)</label>
-          <input type="text" v-model="profile.nickname" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
+          <label class="block font-semibold mb-1 text-stone-700">Tên bé (Nickname) *</label>
+          <input type="text" v-model="profile.nickname" placeholder="Ví dụ: Bé Linh, Bé Cưng..." class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
         </div>
 
         <div>
-          <label class="block font-semibold mb-1 text-stone-700">Tên Bố & Mẹ</label>
-          <input type="text" v-model="profile.parentNames" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
+          <label class="block font-semibold mb-1 text-stone-700">Tên Bố & Mẹ *</label>
+          <input type="text" v-model="profile.parentNames" placeholder="Ví dụ: Mẹ Ngoan & Bố Linh" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
         </div>
 
         <div>
-          <label class="block font-semibold mb-1 text-stone-700">Ngày sinh</label>
+          <label class="block font-semibold mb-1 text-stone-700">Ngày sinh / Ngày dự sinh *</label>
           <input type="date" v-model="profile.birthDate" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-stone-700">Link ảnh đại diện bé (URL ảnh)</label>
+          <input type="url" v-model="profile.avatar" placeholder="https://..." class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden text-xs font-mono">
+        </div>
+
+        <!-- Section: Sao lưu & Chuyển dữ liệu (Export / Import) -->
+        <div class="p-3.5 rounded-2xl bg-rose-50/80 border border-rose-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-rose-900 flex items-center gap-1.5">
+              <span>📦</span>
+              <span>Sao lưu & Chuyển dữ liệu</span>
+            </span>
+            <button 
+              type="button" 
+              @click="openSettingsModal = false; openBackupModal = true; prepareExport()" 
+              class="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+            >
+              Xuất / Nhập JSON
+            </button>
+          </div>
+          <p class="text-[11px] text-rose-800/80 leading-relaxed">
+            Chuyển dữ liệu đã lưu từ AI Studio sang trang GitHub Pages chỉ trong 1 thao tác copy-paste, hoặc tải file sao lưu về máy tính.
+          </p>
         </div>
 
         <!-- Password section in settings -->
@@ -436,11 +500,95 @@
 
         <div class="flex justify-end gap-2 pt-2 border-t border-stone-100">
           <button @click="openSettingsModal = false" class="px-4 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-xl">Đóng</button>
-          <button @click="openSettingsModal = false; saveLocal(); alert('Đã lưu thông tin bé thành công!')" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-xs">
-            Lưu lại
+          <button @click="saveProfileSettings" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-xs flex items-center gap-1.5">
+            <span>💾</span>
+            <span>Lưu lại</span>
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Modal: Sao lưu & Chuyển dữ liệu (Export / Import JSON) -->
+    <div v-if="openBackupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-rose-100 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">📦</div>
+            <h3 class="font-bold text-base text-stone-800">Sao lưu & Chuyển dữ liệu</h3>
+          </div>
+          <button @click="openBackupModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+
+        <p class="text-stone-600 text-xs leading-relaxed">
+          Tính năng này giúp bạn chuyển toàn bộ dữ liệu (hồ sơ bé, các bài nhật ký, hình ảnh) từ AI Studio sang trang GitHub Pages, hoặc sao lưu về máy tính để không bao giờ bị mất dữ liệu.
+        </p>
+
+        <!-- Tabs -->
+        <div class="flex rounded-xl bg-stone-100 p-1 text-xs font-semibold">
+          <button @click="backupTab = 'export'; prepareExport()" class="flex-1 py-1.5 rounded-lg transition-all" :class="backupTab === 'export' ? 'bg-white text-stone-800 shadow-2xs' : 'text-stone-500'">
+            📤 Xuất dữ liệu (Export)
+          </button>
+          <button @click="backupTab = 'import'" class="flex-1 py-1.5 rounded-lg transition-all" :class="backupTab === 'import' ? 'bg-white text-stone-800 shadow-2xs' : 'text-stone-500'">
+            📥 Nhập dữ liệu (Import)
+          </button>
+        </div>
+
+        <!-- Export tab -->
+        <div v-if="backupTab === 'export'" class="space-y-3">
+          <div class="p-3 rounded-2xl bg-rose-50/70 border border-rose-100 text-xs text-rose-800 space-y-1">
+            <p class="font-bold">Cách chuyển sang GitHub Pages:</p>
+            <ol class="list-decimal list-inside space-y-0.5 text-rose-700/90">
+              <li>Bấm nút <strong>"Sao chép JSON"</strong> ở dưới.</li>
+              <li>Mở trang web GitHub Pages của bạn: <code>https://ngoanhuynh114.github.io/Ngoan_Linh_2027/</code>.</li>
+              <li>Vào ⚙️ Cài đặt &gt; Sao lưu &gt; chọn tab <strong>"Nhập dữ liệu"</strong> rồi Dán vào & bấm Áp dụng.</li>
+            </ol>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-stone-700">Mã dữ liệu JSON của bạn (bao gồm {{ memories.length }} kỷ niệm & hồ sơ bé):</label>
+            <textarea readonly :value="exportedJson" class="w-full h-36 p-2.5 rounded-xl border border-stone-200 font-mono text-[11px] bg-stone-50 text-stone-700 focus:outline-hidden"></textarea>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button @click="copyExportedJson" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center gap-1.5 shadow-xs">
+              <span>📋</span>
+              <span>Sao chép JSON</span>
+            </button>
+            <button @click="downloadBackupFile" class="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold flex items-center gap-1.5 shadow-xs">
+              <span>💾</span>
+              <span>Tải file .json về máy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Import tab -->
+        <div v-if="backupTab === 'import'" class="space-y-3">
+          <p class="text-stone-600 text-xs leading-relaxed">
+            Dán mã dữ liệu JSON bạn đã xuất từ AI Studio hoặc chọn file backup từ máy tính để khôi phục ngay:
+          </p>
+          <div>
+            <textarea v-model="importJsonText" placeholder='Dán mã JSON có dạng {"profile": {...}, "memories": [...]} vào đây...' class="w-full h-36 p-2.5 rounded-xl border border-stone-200 font-mono text-[11px] focus:border-rose-400 focus:outline-hidden"></textarea>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <label class="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-xs font-medium cursor-pointer text-stone-700">
+              📂 Nạp từ file .json
+              <input type="file" accept=".json" @change="handleImportFile" class="hidden">
+            </label>
+            <button @click="applyImportData" class="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold shadow-xs">
+              Áp dụng dữ liệu này
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Floating Toast Notification -->
+    <div 
+      v-if="toastMessage" 
+      class="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-medium transition-all animate-bounce"
+      :class="toastType === 'error' ? 'bg-red-600 text-white' : (toastType === 'info' ? 'bg-indigo-600 text-white' : 'bg-stone-900 text-white')"
+    >
+      <span>{{ toastMessage }}</span>
+      <button @click="toastMessage = ''" class="ml-2 text-white/70 hover:text-white font-bold">✕</button>
     </div>
 
   </div>
@@ -451,9 +599,9 @@
     createApp({
       setup() {
         const profile = ref({
-          nickname: 'Bé Xù',
-          parentNames: 'Mẹ Lan & Bố Hải',
-          birthDate: '2025-05-18',
+          nickname: 'Bé Linh',
+          parentNames: 'Mẹ Ngoan & Bố Linh',
+          birthDate: '2027-01-01',
           avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=400&q=80',
           gasUrl: '',
           adminPassword: '123'
@@ -461,39 +609,27 @@
 
         const memories = ref([
           {
-            id: '1',
-            date: '2026-05-18',
-            title: 'Thôi nôi tròn 1 tuổi & Bước đi đầu tiên! 🎂',
-            content: 'Hôm nay công chúa nhỏ của mẹ tròn 1 tuổi. Con đã chập chững bước 5 bước vào vòng tay bố mẹ!',
-            stage: 'milestones',
-            milestoneTag: 'Sinh nhật 1 tuổi',
+            id: 'mem_1',
+            date: '2026-11-01',
+            title: 'Hành trình đón con yêu chào đời - Gia đình Ngoan & Linh 💕',
+            content: 'Chào mừng con yêu đến với bố mẹ! Từng ngày trôi qua bố mẹ đều mong ngóng và chuẩn bị những điều tuyệt vời nhất để đón chào con trong năm 2027.',
+            stage: 'pregnancy',
+            milestoneTag: 'Hành trình bắt đầu',
             mediaType: 'image',
             mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=80',
-            emotions: ['Hạnh phúc ❤️', 'Xúc động 🥹'],
+            emotions: ['Hạnh phúc ❤️', 'Ngóng trông 🌸'],
             likes: 12
           },
           {
-            id: '2',
-            date: '2025-08-28',
-            title: '3 tháng 10 ngày - Con biết lẫy tròn vo! 🎉',
-            content: 'Chiều nay con úp cái bụng tròn xuống thảm rồi ngẩng đầu cười toe toét nhìn mẹ.',
-            stage: 'milestones',
-            milestoneTag: 'Biết lẫy',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=800&q=80',
-            emotions: ['Tự hào 🌟'],
-            likes: 8
-          },
-          {
-            id: '3',
-            date: '2024-11-12',
-            title: 'Tuần 12: Siêu âm độ mờ da gáy - Bàn tay bé xíu 👋',
-            content: 'Con ngọ nguậy giơ bàn tay nhỏ xíu lên chào mẹ. Kết quả khỏe mạnh, mẹ thở phào nhẹ nhõm!',
+            id: 'mem_2',
+            date: '2026-10-15',
+            title: 'Khoảnh khắc đầu tiên nghe nhịp tim của con 💓',
+            content: 'Tiếng tim con đập rộn ràng như bản nhạc kỳ diệu nhất thế giới. Cảm giác thiêng liêng đến rơi nước mắt!',
             stage: 'pregnancy',
-            milestoneTag: 'Siêu âm 12 tuần',
+            milestoneTag: 'Nghe tim thai',
             mediaType: 'image',
             mediaUrl: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?auto=format&fit=crop&w=800&q=80',
-            emotions: ['Kỳ diệu ✨'],
+            emotions: ['Kỳ diệu ✨', 'Yêu thương 🥰'],
             likes: 15
           }
         ]);
@@ -507,6 +643,13 @@
         const openAdminModal = ref(false);
         const openSettingsModal = ref(false);
         const openPasswordModal = ref(false);
+        const openBackupModal = ref(false);
+        const backupTab = ref('export');
+        const exportedJson = ref('');
+        const importJsonText = ref('');
+        const toastMessage = ref('');
+        const toastType = ref('success');
+
         const adminInput = ref('');
         const adminLoginError = ref('');
         const passwordError = ref('');
@@ -518,6 +661,7 @@
         });
         const tempGasUrl = ref('');
         const isSubmitting = ref(false);
+        const isSyncing = ref(false);
 
         const formMemory = ref({
           id: '',
@@ -534,13 +678,37 @@
         const fileName = ref('');
         const previewUrl = ref('');
 
+        const showToast = (msg, type = 'success') => {
+          toastMessage.value = msg;
+          toastType.value = type;
+          setTimeout(() => {
+            if (toastMessage.value === msg) {
+              toastMessage.value = '';
+            }
+          }, 4500);
+        };
+
         const calculatedAge = computed(() => {
           if (!profile.value.birthDate) return { formatted: '---', totalDays: 0 };
-          const birth = new Date(profile.value.birthDate);
+          const target = new Date(profile.value.birthDate);
           const now = new Date();
-          let years = now.getFullYear() - birth.getFullYear();
-          let months = now.getMonth() - birth.getMonth();
-          let days = now.getDate() - birth.getDate();
+          
+          if (now < target) {
+            // Đang trong thai kỳ / đếm ngược đến ngày sinh
+            const diffMs = target.getTime() - now.getTime();
+            const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            const weeksLeft = Math.floor(daysLeft / 7);
+            const remainDays = daysLeft % 7;
+            let formatted = `Còn ${daysLeft} ngày`;
+            if (weeksLeft > 0) {
+              formatted = `Còn ${weeksLeft} tuần ${remainDays > 0 ? remainDays + ' ngày' : ''}`;
+            }
+            return { formatted, totalDays: daysLeft, isCountdown: true };
+          }
+
+          let years = now.getFullYear() - target.getFullYear();
+          let months = now.getMonth() - target.getMonth();
+          let days = now.getDate() - target.getDate();
           if (days < 0) {
             months--;
             days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
@@ -549,12 +717,12 @@
             years--;
             months += 12;
           }
-          const totalDays = Math.floor(Math.abs(now - birth) / (1000 * 60 * 60 * 24));
+          const totalDays = Math.floor(Math.abs(now - target) / (1000 * 60 * 60 * 24));
           const parts = [];
           if (years > 0) parts.push(years + ' tuổi');
           if (months > 0) parts.push(months + ' tháng');
           parts.push(days + ' ngày');
-          return { formatted: parts.join(' '), totalDays };
+          return { formatted: parts.join(' '), totalDays, isCountdown: false };
         });
 
         const filteredMemories = computed(() => {
@@ -581,17 +749,178 @@
 
         const loadLocal = () => {
           const m = localStorage.getItem('nhatky_standalone_memories');
-          if (m) memories.value = JSON.parse(m);
+          if (m) {
+            try {
+              const parsedM = JSON.parse(m);
+              if (Array.isArray(parsedM) && parsedM.length > 0) {
+                memories.value = parsedM;
+              }
+            } catch(e){}
+          }
           const p = localStorage.getItem('nhatky_standalone_profile');
           if (p) {
-            const parsed = JSON.parse(p);
-            profile.value = {
-              ...profile.value,
-              ...parsed,
-              adminPassword: parsed.adminPassword || '123'
-            };
+            try {
+              const parsed = JSON.parse(p);
+              profile.value = {
+                ...profile.value,
+                ...parsed,
+                adminPassword: parsed.adminPassword || '123'
+              };
+            } catch(e){}
           }
           tempGasUrl.value = profile.value.gasUrl || '';
+        };
+
+        const fetchDataFromGas = async (silent = false) => {
+          if (!profile.value.gasUrl || !profile.value.gasUrl.trim()) return;
+          try {
+            isSyncing.value = true;
+            if (!silent) showToast('Đang kết nối & tải dữ liệu từ Google Sheets...', 'info');
+            const cleanUrl = profile.value.gasUrl.trim();
+            const fetchUrl = cleanUrl.includes('?') 
+              ? `${cleanUrl}&action=getMemories` 
+              : `${cleanUrl}?action=getMemories`;
+            
+            const res = await fetch(fetchUrl);
+            const json = await res.json();
+            
+            if (json.status === 'success') {
+              if (Array.isArray(json.data) && json.data.length > 0) {
+                memories.value = json.data;
+              }
+              if (json.profile && Object.keys(json.profile).length > 0) {
+                if (json.profile.nickname) profile.value.nickname = json.profile.nickname;
+                if (json.profile.parentNames) profile.value.parentNames = json.profile.parentNames;
+                if (json.profile.birthDate) profile.value.birthDate = json.profile.birthDate;
+                if (json.profile.avatar) profile.value.avatar = json.profile.avatar;
+              }
+              saveLocal();
+              showToast(`Đã đồng bộ thành công! (${memories.value.length} kỷ niệm)`, 'success');
+            } else {
+              if (!silent) showToast('Google Sheets: ' + (json.message || 'Không thể đọc dữ liệu'), 'error');
+            }
+          } catch(err) {
+            console.warn('Lỗi tải dữ liệu Google Apps Script:', err);
+            if (!silent) showToast('Không thể kết nối Google Sheets: ' + (err.message || 'Lỗi mạng'), 'error');
+          } finally {
+            isSyncing.value = false;
+          }
+        };
+
+        const saveProfileSettings = async () => {
+          saveLocal();
+          showToast('Đã lưu thông tin bé vào trình duyệt!');
+          if (profile.value.gasUrl) {
+            try {
+              showToast('Đang đồng bộ hồ sơ lên Google Sheets...', 'info');
+              await fetch(profile.value.gasUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                  action: 'saveProfile',
+                  profile: {
+                    nickname: profile.value.nickname,
+                    parentNames: profile.value.parentNames,
+                    birthDate: profile.value.birthDate,
+                    avatar: profile.value.avatar,
+                    adminPassword: profile.value.adminPassword
+                  }
+                })
+              });
+              showToast('Đã lưu hồ sơ bé lên Google Sheets thành công!');
+            } catch(e) {
+              console.warn('Lỗi lưu profile lên Google Sheets:', e);
+            }
+          }
+          openSettingsModal.value = false;
+        };
+
+        const saveGasUrl = async () => {
+          const url = tempGasUrl.value.trim();
+          profile.value.gasUrl = url;
+          saveLocal();
+          openGasModal.value = false;
+          if (url) {
+            await fetchDataFromGas(false);
+          } else {
+            showToast('Đã xóa liên kết Google Apps Script.');
+          }
+        };
+
+        // Sao lưu & Chuyển dữ liệu (Export / Import)
+        const prepareExport = () => {
+          const bundle = {
+            version: '2.0',
+            exportedAt: new Date().toISOString(),
+            profile: profile.value,
+            memories: memories.value
+          };
+          exportedJson.value = JSON.stringify(bundle, null, 2);
+        };
+
+        const copyExportedJson = async () => {
+          prepareExport();
+          try {
+            await navigator.clipboard.writeText(exportedJson.value);
+            showToast('Đã sao chép mã JSON vào bộ nhớ tạm! Bạn có thể dán vào trang GitHub Pages.');
+          } catch(err) {
+            alert('Không thể sao chép tự động. Hãy chọn toàn bộ văn bản trong khung và copy thủ công.');
+          }
+        };
+
+        const downloadBackupFile = () => {
+          prepareExport();
+          const blob = new Blob([exportedJson.value], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `NhatKy_Ngoan_Linh_${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('Đã tải file sao lưu về máy!');
+        };
+
+        const handleImportFile = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            importJsonText.value = event.target.result;
+          };
+          reader.readAsText(file);
+        };
+
+        const applyImportData = () => {
+          if (!importJsonText.value || !importJsonText.value.trim()) {
+            alert('Vui lòng dán mã JSON hoặc chọn file sao lưu!');
+            return;
+          }
+          try {
+            const data = JSON.parse(importJsonText.value.trim());
+            let importedMemoriesCount = 0;
+
+            if (data.profile) {
+              profile.value = {
+                ...profile.value,
+                ...data.profile,
+                gasUrl: profile.value.gasUrl || data.profile.gasUrl || ''
+              };
+            }
+            if (Array.isArray(data.memories)) {
+              memories.value = data.memories;
+              importedMemoriesCount = data.memories.length;
+            } else if (Array.isArray(data)) {
+              memories.value = data;
+              importedMemoriesCount = data.length;
+            }
+
+            saveLocal();
+            openBackupModal.value = false;
+            importJsonText.value = '';
+            showToast(`Áp dụng dữ liệu thành công! (${importedMemoriesCount} kỷ niệm)`);
+          } catch(err) {
+            alert('Mã JSON không hợp lệ: ' + err.message);
+          }
         };
 
         const openAddMemoryModal = () => {
@@ -632,6 +961,7 @@
           }
           memories.value = memories.value.filter(m => m.id !== id);
           saveLocal();
+          showToast('Đã xóa kỷ niệm.');
         };
 
         const handleFileChange = (e) => {
@@ -689,6 +1019,7 @@
             }
             saveLocal();
             showAddEditModal.value = false;
+            showToast('Đã lưu kỷ niệm thành công!');
           } catch(err) {
             alert('Lỗi khi lưu bài viết: ' + err.message);
           } finally {
@@ -707,6 +1038,7 @@
             isAdmin.value = true;
             openAdminModal.value = false;
             adminInput.value = '';
+            showToast('Đã đăng nhập quyền Quản trị!');
           } else {
             adminLoginError.value = 'Mật khẩu không chính xác. Vui lòng thử lại!';
           }
@@ -733,6 +1065,7 @@
           profile.value.adminPassword = passwordForm.value.newPass.trim();
           saveLocal();
           passwordSuccess.value = 'Đã đổi mật khẩu quản trị thành công!';
+          showToast('Đã đổi mật khẩu quản trị thành công!');
           setTimeout(() => {
             openPasswordModal.value = false;
             passwordForm.value = { current: '', newPass: '', confirmPass: '' };
@@ -743,17 +1076,14 @@
 
         const logoutAdmin = () => {
           isAdmin.value = false;
+          showToast('Đã đăng xuất quyền quản trị.');
         };
 
-        const saveGasUrl = () => {
-          profile.value.gasUrl = tempGasUrl.value.trim();
-          saveLocal();
-          openGasModal.value = false;
-          alert('Đã lưu Google Apps Script Web App URL!');
-        };
-
-        onMounted(() => {
+        onMounted(async () => {
           loadLocal();
+          if (profile.value.gasUrl) {
+            await fetchDataFromGas(true);
+          }
         });
 
         return {
@@ -768,6 +1098,12 @@
           openAdminModal,
           openSettingsModal,
           openPasswordModal,
+          openBackupModal,
+          backupTab,
+          exportedJson,
+          importJsonText,
+          toastMessage,
+          toastType,
           adminInput,
           adminLoginError,
           passwordError,
@@ -778,10 +1114,19 @@
           previewUrl,
           fileName,
           isSubmitting,
+          isSyncing,
           calculatedAge,
           filteredMemories,
           formatDate,
           saveLocal,
+          showToast,
+          fetchDataFromGas,
+          saveProfileSettings,
+          prepareExport,
+          copyExportedJson,
+          downloadBackupFile,
+          handleImportFile,
+          applyImportData,
           openAddMemoryModal,
           editMemory,
           deleteMemory,

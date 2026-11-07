@@ -1,12 +1,12 @@
 import { BabyProfile, Memory } from './types';
 
 export const INITIAL_BABY_PROFILE: BabyProfile = {
-  name: 'Đặng Ngọc Minh Thư',
-  nickname: 'Bé Xù',
-  parentNames: 'Mẹ Lan & Bố Hải',
-  isBorn: true,
-  birthDate: '2025-05-18', // Baby birthdate
-  dueDate: '2025-05-20',
+  name: 'Bé Linh (Ngoan & Linh)',
+  nickname: 'Bé Linh',
+  parentNames: 'Mẹ Ngoan & Bố Linh',
+  isBorn: false,
+  birthDate: '2027-01-01', // Baby birthdate / due date
+  dueDate: '2027-01-01',
   avatarUrl: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80',
   adminPassword: '123',
   gasWebAppUrl: '',

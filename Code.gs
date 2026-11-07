@@ -17,6 +17,8 @@ var DRIVE_FOLDER_ID = "";
 // Tên trang tính trong Google Sheet
 var SHEET_NAME = "NhatKy";
 
+var PROFILE_SHEET_NAME = "CauHinh";
+
 // Danh sách tiêu đề các cột trong Google Sheet
 var SHEET_HEADERS = [
   "ID",
@@ -48,6 +50,70 @@ function getOrCreateSheet() {
     sheet.setFrozenRows(1);
   }
   return sheet;
+}
+
+/**
+ * Khởi tạo hoặc lấy Sheet cấu hình hồ sơ bé
+ */
+function getOrCreateProfileSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PROFILE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PROFILE_SHEET_NAME);
+    sheet.appendRow(["Thuộc tính", "Giá trị"]);
+    sheet.getRange(1, 1, 1, 2)
+      .setBackground("#FCE7F3")
+      .setFontWeight("bold")
+      .setFontColor("#9D174D");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Đọc thông tin hồ sơ bé từ Google Sheets
+ */
+function getProfileData() {
+  try {
+    var sheet = getOrCreateProfileSheet();
+    var data = sheet.getDataRange().getValues();
+    var profile = {};
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        profile[String(data[i][0])] = String(data[i][1] || "");
+      }
+    }
+    return profile;
+  } catch (err) {
+    Logger.log("Lỗi đọc profile: " + err);
+    return {};
+  }
+}
+
+/**
+ * Lưu thông tin hồ sơ bé vào Google Sheets
+ */
+function saveProfileData(profileObj) {
+  var sheet = getOrCreateProfileSheet();
+  var existingData = sheet.getDataRange().getValues();
+  var rowMap = {};
+  for (var i = 1; i < existingData.length; i++) {
+    rowMap[String(existingData[i][0])] = i + 1;
+  }
+
+  var keys = ["nickname", "parentNames", "birthDate", "avatar", "adminPassword"];
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    if (profileObj[key] !== undefined && profileObj[key] !== null) {
+      if (rowMap[key]) {
+        sheet.getRange(rowMap[key], 2).setValue(String(profileObj[key]));
+      } else {
+        sheet.appendRow([key, String(profileObj[key])]);
+        rowMap[key] = sheet.getLastRow();
+      }
+    }
+  }
+  return getProfileData();
 }
 
 /**
@@ -87,52 +153,59 @@ function doGet(e) {
       });
     }
 
-    if (action === "getMemories") {
+    if (action === "getMemories" || action === "getAllData") {
       var sheet = getOrCreateSheet();
       var data = sheet.getDataRange().getValues();
-      
-      // Nếu chỉ có hàng tiêu đề
-      if (data.length <= 1) {
-        return createJsonResponse({ status: "success", data: [] });
-      }
-
       var memories = [];
-      // Bắt đầu đọc từ dòng thứ 2 (bỏ qua dòng tiêu đề)
-      for (var i = 1; i < data.length; i++) {
-        var row = data[i];
-        if (!row[0]) continue; // Bỏ qua dòng trống
+      
+      // Nếu có dữ liệu bài viết (từ dòng 2 trở đi)
+      if (data.length > 1) {
+        for (var i = 1; i < data.length; i++) {
+          var row = data[i];
+          if (!row[0]) continue; // Bỏ qua dòng trống
 
-        var emotionsArr = [];
-        if (row[10]) {
-          try {
-            emotionsArr = typeof row[10] === "string" ? row[10].split(",").map(function(s){ return s.trim(); }) : [String(row[10])];
-          } catch(e){}
+          var emotionsArr = [];
+          if (row[10]) {
+            try {
+              emotionsArr = typeof row[10] === "string" ? row[10].split(",").map(function(s){ return s.trim(); }) : [String(row[10])];
+            } catch(e){}
+          }
+
+          memories.push({
+            id: String(row[0]),
+            date: formatDateString(row[1]),
+            title: String(row[2] || ""),
+            content: String(row[3] || ""),
+            stage: String(row[4] || "daily"),
+            milestoneTag: String(row[5] || ""),
+            weekOrAge: String(row[5] || ""),
+            mediaType: String(row[6] || "none"),
+            mediaUrl: String(row[7] || ""),
+            driveFileId: String(row[8] || ""),
+            createdAt: String(row[9] || ""),
+            emotions: emotionsArr
+          });
         }
 
-        memories.push({
-          id: String(row[0]),
-          date: formatDateString(row[1]),
-          title: String(row[2] || ""),
-          content: String(row[3] || ""),
-          stage: String(row[4] || "daily"),
-          milestoneTag: String(row[5] || ""),
-          weekOrAge: String(row[5] || ""),
-          mediaType: String(row[6] || "none"),
-          mediaUrl: String(row[7] || ""),
-          driveFileId: String(row[8] || ""),
-          createdAt: String(row[9] || ""),
-          emotions: emotionsArr
+        // Sắp xếp bài mới nhất lên đầu theo ngày
+        memories.sort(function(a, b) {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
         });
       }
 
-      // Sắp xếp bài mới nhất lên đầu theo ngày
-      memories.sort(function(a, b) {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
+      var profileData = getProfileData();
 
       return createJsonResponse({
         status: "success",
-        data: memories
+        data: memories,
+        profile: profileData
+      });
+    }
+
+    if (action === "getProfile") {
+      return createJsonResponse({
+        status: "success",
+        profile: getProfileData()
       });
     }
 
@@ -162,6 +235,17 @@ function doPost(e) {
     }
 
     var action = requestData.action || "createMemory";
+
+    // 0. LƯU CẤU HÌNH HỒ SƠ BÉ VÀO GOOGLE SHEETS
+    if (action === "saveProfile") {
+      var profileData = requestData.profile || requestData;
+      var saved = saveProfileData(profileData);
+      return createJsonResponse({
+        status: "success",
+        message: "Đã lưu hồ sơ bé lên Google Sheets thành công!",
+        profile: saved
+      });
+    }
 
     // 1. TẠO MỚI KỶ NIỆM (KÈM UPLOAD FILE HOẶC DÙNG LINK CÓ SẴN)
     if (action === "createMemory") {
