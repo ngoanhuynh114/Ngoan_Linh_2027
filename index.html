@@ -1256,13 +1256,18 @@
             if (res.ok) {
               const remote = await res.json();
               if (remote.profile) {
-                profile.value = { ...profile.value, ...remote.profile };
+                // Không cho file tĩnh ghi đè gasUrl bằng giá trị rỗng
+                const { gasUrl: _ignored, ...remoteProfile } = remote.profile;
+                profile.value = { ...profile.value, ...remoteProfile };
               }
               if (Array.isArray(remote.memories) && remote.memories.length > 0) {
                 memories.value = remote.memories;
               }
             }
           } catch(e) {}
+
+          // Bảo đảm luôn có URL (ưu tiên URL đã lưu, nếu không thì dùng URL mặc định)
+          profile.value.gasUrl = (profile.value.gasUrl || DEFAULT_GAS_URL || '').trim();
 
           // 4. Tự động kết nối Google Sheets (tải dữ liệu Google Drive & Sheets cho MỌI trình duyệt: Safari, Edge, Chrome, iPhone...)
           if (profile.value.gasUrl) {
