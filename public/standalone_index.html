@@ -857,7 +857,9 @@
         };
 
         const loadLocal = () => {
-          const m = localStorage.getItem('nhatky_standalone_memories');
+          const m = localStorage.getItem('nhatky_standalone_memories') || 
+                    localStorage.getItem('nhatky_memories_v2') || 
+                    localStorage.getItem('nhatky_memories');
           if (m) {
             try {
               const parsedM = JSON.parse(m);
@@ -866,7 +868,10 @@
               }
             } catch(e){}
           }
-          const p = localStorage.getItem('nhatky_standalone_profile');
+          const p = localStorage.getItem('nhatky_standalone_profile') || 
+                    localStorage.getItem('nhatky_baby_profile_v2') || 
+                    localStorage.getItem('nhatky_baby_profile') ||
+                    localStorage.getItem('nhatky_profile');
           if (p) {
             try {
               const parsed = JSON.parse(p);
@@ -1192,31 +1197,42 @@
           prepareExport();
         };
 
-        const buildStandaloneHtml = () => {
-          // Generate a self-contained HTML with the current profile and memories baked into initial state
-          let docHtml = document.documentElement.outerHTML;
-          return '<!doctype html>\n' + docHtml;
+        const getExportHtml = async () => {
+          let code = '';
+          try {
+            const htmlRes = await fetch('./index.html?t=' + Date.now());
+            if (htmlRes.ok) {
+              code = await htmlRes.text();
+            }
+          } catch(e){}
+
+          if (!code) {
+            code = '<!doctype html>\n' + document.documentElement.outerHTML;
+          }
+
+          // Format clean JSON for the user's REAL profile and memories
+          const profileJson = JSON.stringify(profile.value, null, 10);
+          const memoriesJson = JSON.stringify(memories.value, null, 10);
+
+          // Find and replace the default profile and memories blocks in template
+          const profileRegex = /const profile = ref\(\{[\s\S]*?\}\);/;
+          const memoriesRegex = /const memories = ref\(\[[\s\S]*?\]\);/;
+
+          if (profileRegex.test(code)) {
+            code = code.replace(profileRegex, `const profile = ref(${profileJson});`);
+          }
+          if (memoriesRegex.test(code)) {
+            code = code.replace(memoriesRegex, `const memories = ref(${memoriesJson});`);
+          }
+
+          return code;
         };
 
         const copyPublishHtml = async () => {
           try {
-            // Read or construct updated index.html
-            // We use the full template where memories.value and profile.value are serialized
-            const serializedProfile = JSON.stringify(profile.value, null, 10);
-            const serializedMemories = JSON.stringify(memories.value, null, 10);
-            
-            // To ensure 100% clean standalone HTML without runtime DOM artifacts:
-            const htmlRes = await fetch('./index.html?t=' + Date.now());
-            let rawCode = '';
-            if (htmlRes.ok) {
-              rawCode = await htmlRes.text();
-            }
-            if (!rawCode) {
-              rawCode = '<!doctype html>\n' + document.documentElement.outerHTML;
-            }
-
-            await navigator.clipboard.writeText(rawCode);
-            showToast('Đã sao chép mã index.html! Hãy vào GitHub dán đè là xong ngay.');
+            const code = await getExportHtml();
+            await navigator.clipboard.writeText(code);
+            showToast('Đã sao chép mã index.html chứa đầy đủ dữ liệu riêng của bạn! Hãy dán đè lên GitHub.');
           } catch(err) {
             downloadPublishHtml();
           }
@@ -1224,22 +1240,15 @@
 
         const downloadPublishHtml = async () => {
           try {
-            const htmlRes = await fetch('./index.html?t=' + Date.now());
-            let rawCode = '';
-            if (htmlRes.ok) {
-              rawCode = await htmlRes.text();
-            }
-            if (!rawCode) {
-              rawCode = '<!doctype html>\n' + document.documentElement.outerHTML;
-            }
-            const blob = new Blob([rawCode], { type: 'text/html;charset=utf-8' });
+            const code = await getExportHtml();
+            const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'index.html';
             a.click();
             URL.revokeObjectURL(url);
-            showToast('Đã tải file index.html về máy!');
+            showToast('Đã tải file index.html chứa dữ liệu riêng của bạn về máy!');
           } catch(e) {
             alert('Lỗi tải file: ' + e.message);
           }
