@@ -655,95 +655,65 @@
     const { createApp, ref, computed, onMounted } = Vue;
 
     // CẤU HÌNH LIÊN KẾT GOOGLE APPS SCRIPT CHO MỌI THIẾT BỊ (SAFARI, EDGE, CHROME, IPHONE, ANDROID...):
-    const DEFAULT_GAS_URL = "";
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxchZ3lgCdzufphWhML6_pUwYEbUk4Pg8z7FH_YEhF0-CfJG0CdvcnrnU7VMW_hCt6e/exec";
 
     createApp({
       setup() {
         const profile = ref({
-          nickname: 'Bé Linh',
-          parentNames: 'Mẹ Ngoan & Bố Linh',
-          birthDate: '2027-01-01',
-          dueDate: '2027-01-01',
-          avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80',
-          quote: 'Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Ngoan & Bố Linh (2027)',
-          adminPassword: '123',
-          gasUrl: DEFAULT_GAS_URL || ''
-        });
+          "nickname": "Bé Linh",
+          "parentNames": "Mẹ Ngoan & Bố Linh",
+          "birthDate": "2027-01-01",
+          "dueDate": "2027-01-01",
+          "avatar": "https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80",
+          "quote": "Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Ngoan & Bố Linh (2027)",
+          "adminPassword": "Tanngoan95",
+          "gasUrl": "https://script.google.com/macros/s/AKfycbxchZ3lgCdzufphWhML6_pUwYEbUk4Pg8z7FH_YEhF0-CfJG0CdvcnrnU7VMW_hCt6e/exec"
+});
 
         const memories = ref([
           {
-            id: 'mem_1',
-            date: '2026-05-10',
-            title: 'Ngày 2 vạch kỳ diệu - Bố mẹ vỡ òa trong hạnh phúc! 🌸',
-            content: 'Sáng sớm thức dậy, chiếc que thử hiện rõ hai vạch đỏ hồng. Mẹ vừa mừng vừa run, gọi bố Linh dậy ngay. Bố ôm chặt lấy mẹ rồi rơm rớm nước mắt. Cảm ơn con yêu đã đến bên bố mẹ, bắt đầu hành trình tuyệt diệu nhất đời!',
-            stage: 'pregnancy',
-            milestoneTag: 'Phát hiện có thai',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['Hạnh phúc ❤️', 'Xúc động 🥹'],
-            likes: 24
+                    "id": "mem_1794062511609",
+                    "date": "Wed Oct 14 2026 00:00:00 GMT+0700 (Giờ Đông Dương)",
+                    "title": "Lần đầu mẹ Linh đi siêu âm",
+                    "content": "Ba nói đi cùng nhưng mẹ nhất quyết tự đi một mình",
+                    "stage": "pregnancy",
+                    "milestoneTag": "Lần đâu đi khám",
+                    "weekOrAge": "Lần đâu đi khám",
+                    "mediaType": "image",
+                    "mediaUrl": "https://lh3.googleusercontent.com/d/1VJr2Jtx-bABLMsNPsHfvPbk2j1bDRd8b",
+                    "driveFileId": "1VJr2Jtx-bABLMsNPsHfvPbk2j1bDRd8b",
+                    "createdAt": "2026-11-07T14:41:51.609Z",
+                    "emotions": []
           },
           {
-            id: 'mem_2',
-            date: '2026-06-25',
-            title: 'Tuần 7: Lần đầu tiên nghe tiếng tim con đập rộn ràng 💓',
-            content: 'Bác sĩ bật máy siêu âm, tiếng tim con đập nhanh và khỏe "thình thịch, thình thịch" vang khắp căn phòng nhỏ. Cảm giác nghe mầm sống bé bỏng lớn dần trong bụng mẹ thật thiêng liêng không gì sánh bằng.',
-            stage: 'pregnancy',
-            milestoneTag: 'Nghe tim thai',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['Kỳ diệu ✨', 'Yêu thương 🥰'],
-            likes: 19
+                    "id": "mem_1794059663899",
+                    "date": "Thu Oct 01 2026 00:00:00 GMT+0700 (Giờ Đông Dương)",
+                    "title": "Con đã đến với gia đình",
+                    "content": "Mẹ Linh test liền 3 que và thông báo cho ba",
+                    "stage": "pregnancy",
+                    "milestoneTag": "Que thử thai lên 2 vạch",
+                    "weekOrAge": "Que thử thai lên 2 vạch",
+                    "mediaType": "image",
+                    "mediaUrl": "https://lh3.googleusercontent.com/d/1WgKOhWY1VbQxhtbmuFQD0YCv74p8BTf0",
+                    "driveFileId": "1WgKOhWY1VbQxhtbmuFQD0YCv74p8BTf0",
+                    "createdAt": "2026-11-07T13:54:23.899Z",
+                    "emotions": []
           },
           {
-            id: 'mem_3',
-            date: '2026-08-12',
-            title: 'Tuần 12: Siêu âm đo độ mờ da gáy - Bàn tay bé xíu vẫy chào 👋',
-            content: 'Hôm nay đi mốc khám quan trọng 12 tuần. Con nằm ngửa, ngọ nguậy giơ bàn tay nhỏ xíu lên như đang chào bố mẹ. Kết quả đo độ mờ da gáy hoàn toàn bình thường, mẹ thở phào nhẹ nhõm và an tâm vô cùng.',
-            stage: 'pregnancy',
-            milestoneTag: 'Siêu âm 12 tuần',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['An tâm 🌿', 'Hạnh phúc ❤️'],
-            likes: 28
-          },
-          {
-            id: 'mem_4',
-            date: '2026-09-20',
-            title: 'Tuần 18: Cú đạp đầu tiên - Con máy chạm vào bàn tay mẹ 👣',
-            content: 'Buổi tối nằm nghỉ ngơi xem phim cùng bố Linh, mẹ bỗng cảm thấy như có đàn cá nhỏ bơi lượn trong bụng. Một cú chòi nhẹ làm bụng mẹ nhấp nhô. Bố vội áp tay vào thì cảm nhận ngay được. Bố cười rạng rỡ cả buổi tối!',
-            stage: 'pregnancy',
-            milestoneTag: 'Cú đạp đầu tiên',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['Ngỡ ngàng 🌟', 'Ấm áp ☀️'],
-            likes: 32
-          },
-          {
-            id: 'mem_5',
-            date: '2026-10-30',
-            title: 'Tuần 24: Bố Linh đọc truyện và thì thầm trò chuyện cùng con 📖',
-            content: 'Mỗi tối trước khi đi ngủ, bố Linh đều áp sát tai vào bụng mẹ kể chuyện cho con nghe và cho con nghe nhạc giao hưởng. Mỗi lần bố cất giọng ấm áp là con lại đạp nhẹ phản hồi như đang nói "Con nghe thấy bố rồi!".',
-            stage: 'daily',
-            milestoneTag: 'Thai giáo cùng bố',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['Yêu thương 🥰', 'Bình yên 🍃'],
-            likes: 21
-          },
-          {
-            id: 'mem_6',
-            date: '2026-11-05',
-            title: 'Chuẩn bị góc nhỏ đón thiên thần chào đời năm 2027 🧸',
-            content: 'Hai vợ chồng rủ nhau đi chọn nôi em bé, sắm từng chiếc áo cotton mềm mại, khăn quấn, bình sữa nhỏ xíu. Từng món đồ nhỏ đều đong đầy tình yêu và mong ngóng ngày con yêu cất tiếng khóc chào đời.',
-            stage: 'daily',
-            milestoneTag: 'Sắm đồ sơ sinh',
-            mediaType: 'image',
-            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1000&q=80',
-            emotions: ['Háo hức 🎀', 'Ngóng trông 🌸'],
-            likes: 27
+                    "id": "mem_1794059526772",
+                    "date": "Mon Sep 21 2026 00:00:00 GMT+0700 (Giờ Đông Dương)",
+                    "title": "Ba mẹ Canh trứng rụng",
+                    "content": "Lúc này mẹ Linh canh trứng rụng để kêu ba về",
+                    "stage": "pregnancy",
+                    "milestoneTag": "Canh trứng rụng",
+                    "weekOrAge": "Canh trứng rụng",
+                    "mediaType": "image",
+                    "mediaUrl": "https://lh3.googleusercontent.com/d/13vRU5Vz3DDNIkt2PiIbUcrmvQZ5WCBma",
+                    "driveFileId": "13vRU5Vz3DDNIkt2PiIbUcrmvQZ5WCBma",
+                    "createdAt": "2026-11-07T13:52:06.772Z",
+                    "emotions": []
           }
-        ]);
+]);
 
         const isAdmin = ref(false);
         const currentStage = ref('all');
