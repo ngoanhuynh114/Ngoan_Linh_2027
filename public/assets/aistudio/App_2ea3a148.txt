@@ -1,0 +1,46 @@
+Hãy đóng vai một Full-Stack Developer chuyên nghiệp. Hãy viết mã nguồn hoàn chỉnh cho một Web Application (Single Page Application - SPA) phục vụ việc: "Lưu giữ và cập nhật hành trình làm mẹ cùng kỷ niệm của bé từ khi trong bụng mẹ".
+
+### 1. YÊU CẦU KIẾN TRÚC & CÔNG NGHỆ
+- Frontend: HTML5, CSS3 (Tailwind CSS CDN), JavaScript ES6+ (Thuần hoặc Vue.js / React CDN nhẹ nhàng, viết gọn trong 1 file index.html).
+- Backend & Storage (Bắt buộc): Sử dụng Google Apps Script (GAS) để làm RESTful API (doGet / doPost).
+- Data Storage: 
+  + Dữ liệu bài viết/nhật ký: Lưu trên Google Sheets (Cột: ID, Ngày, Tiêu đề, Nội dung, Giai đoạn, Loại media, Media URL, Google Drive File ID, Ngày tạo).
+  + Dữ liệu Hình ảnh / Video: Tải trực tiếp (upload) lên một thư mục chỉ định trên Google Drive thông qua Google Apps Script.
+- Giao diện: Ấm áp, nhẹ nhàng (tông màu pastel: hồng phấn, kem, xanh mint), tối ưu giao diện Mobile-First.
+
+### 2. PHÂN QUYỀN & CHỨC NĂNG ME-APP
+
+#### A. Giao diện Người Xem (Public Timeline / Storybook)
+- Trang chủ dạng Dòng thời gian (Timeline) chia theo các Giai đoạn:
+  1. Thai kỳ (Số tuần tuổi: Tuần 1 - Tuần 40, hình ảnh siêu âm, cảm xúc của mẹ).
+  2. Bé chào đời & Cột mốc (Lần đầu lẫy, bò, đi, răng đầu tiên, sinh nhật,...).
+  3. Nhật ký hằng ngày (Khoảnh khắc nhỏ).
+- Lọc bài viết theo Giai đoạn / Cột mốc.
+- Xem chi tiết bài viết kèm Slide ảnh / Trình chiếu Video.
+- Tính năng đếm ngược / đếm số ngày bé đã lớn (ví dụ: "Bé Xù đã được 1 tuổi 2 tháng 15 ngày").
+
+#### B. Giao diện Admin (Quản trị viên dành cho Mẹ/Bố)
+- Chế độ Đăng nhập Admin đơn giản (Xác thực qua Password nhập trực tiếp hoặc qua Session Token đơn giản lưu ở LocalStorage).
+- Form Đăng bài / Thêm kỷ niệm mới:
+  + Chọn Giai đoạn / Cột mốc.
+  + Nhập Tiêu đề & Nội dung nhật ký (hỗ trợ xuống dòng, định dạng cơ bản).
+  + Upload trực tiếp File (Hình ảnh / Video) từ thiết bị.
+- Quản lý bài viết: Chỉnh sửa / Xóa bài viết đã đăng.
+
+### 3. YÊU CẦU CHI TIẾT MÃ NGUỒN CẦN XUẤT RA
+
+Hãy cung cấp cho tôi mã nguồn phân chia rõ ràng thành 2 file:
+
+1. `Code.gs` (Google Apps Script Backend):
+   - Hàm `doGet` để phục vụ giao diện web hoặc trả về JSON data.
+   - Hàm `doPost` xử lý upload file base64 lên Google Drive và ghi thông tin bài viết vào Google Sheet.
+   - Hàm khởi tạo Google Sheet với các tiêu đề cột tự động nếu chưa có.
+
+2. `index.html` (Frontend Application):
+   - Giao diện người dùng hoàn chỉnh tích hợp Tailwind CSS.
+   - Script gọi API tới Google Apps Script Web App URL.
+   - Form upload hỗ trợ chuyển file sang Base64 trước khi gửi tới GAS.
+   - Modal xem ảnh/video phóng to.
+
+### 4. HƯỚNG DẪN TRIỂN KHAI (Deployment Step-by-step)
+- Viết từng bước ngắn gọn hướng dẫn cách tôi tạo File Google Sheet, thư mục Google Drive, dán code vào Google Apps Script và Deploy dưới dạng Web App ("Anyone" access).

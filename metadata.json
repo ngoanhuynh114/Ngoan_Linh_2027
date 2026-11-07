@@ -1,0 +1,8 @@
+{
+  "name": "Nhật Ký Mẹ & Bé - Hành Trình Yêu Thương",
+  "description": "Ứng dụng lưu giữ và cập nhật hành trình làm mẹ cùng kỷ niệm của bé từ khi trong bụng mẹ đến từng cột mốc khôn lớn, kết nối Google Sheets & Google Drive.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
