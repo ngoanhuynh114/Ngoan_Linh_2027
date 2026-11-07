@@ -47,10 +47,13 @@
           </button>
 
           <!-- Admin Lock / Unlock -->
-          <button v-if="isAdmin" @click="logoutAdmin" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+          <button v-if="isAdmin" @click="logoutAdmin" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100" title="Đang quản trị. Nhấn để đăng xuất">
             🔓 Mẹ & Bố
           </button>
-          <button v-else @click="openAdminModal = true" class="px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 text-xs font-medium">
+          <button v-if="isAdmin" @click="openPasswordModal = true" class="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold hover:bg-amber-100 flex items-center gap-1" title="Đổi mật khẩu bảo mật">
+            🔑 Đổi MK
+          </button>
+          <button v-else @click="openAdminModal = true; adminLoginError = ''" class="px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 text-xs font-medium">
             🔒 Quản trị
           </button>
 
@@ -61,6 +64,17 @@
         </div>
       </div>
     </header>
+
+    <!-- Security Warning Banner (Chỉ hiện khi Admin đăng nhập mà chưa đổi mật khẩu mặc định) -->
+    <div v-if="isAdmin && (profile.adminPassword === '123' || !profile.adminPassword)" class="bg-amber-100/90 border-b border-amber-300 px-4 py-2 text-xs text-amber-900 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">⚠️</span>
+        <span><strong>Cảnh báo bảo mật:</strong> Mật khẩu quản trị của bạn đang là mặc định (123). Hãy đổi mật khẩu riêng để bảo vệ nhật ký của bé khỏi người lạ!</span>
+      </div>
+      <button @click="openPasswordModal = true" class="px-3 py-1 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 transition-colors shrink-0">
+        Đổi mật khẩu ngay
+      </button>
+    </div>
 
     <!-- Main Container -->
     <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
@@ -262,37 +276,169 @@
       </div>
     </div>
 
-    <!-- Modal: Admin Auth -->
+    <!-- Modal: Admin Auth (Đăng nhập Quản trị) -->
     <div v-if="openAdminModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-3">
-        <h3 class="font-bold text-stone-800">Mở khóa Quản trị</h3>
-        <p class="text-xs text-stone-500">Nhập mật khẩu (Mặc định: 123):</p>
-        <input type="password" v-model="adminInput" @keyup.enter="loginAdmin" placeholder="Nhập 123" class="w-full p-2 rounded-xl border border-stone-200 text-sm">
-        <div class="flex justify-end gap-2 pt-2">
-          <button @click="openAdminModal = false" class="px-3 py-1.5 text-xs text-stone-500">Hủy</button>
-          <button @click="loginAdmin" class="px-4 py-1.5 text-xs rounded-xl bg-rose-500 text-white font-bold">Đăng nhập</button>
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center text-sm shadow-2xs">
+              🔒
+            </div>
+            <h3 class="font-bold text-stone-800 text-base">Đăng Nhập Quản Trị</h3>
+          </div>
+          <button @click="openAdminModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+
+        <p class="text-xs text-stone-600">
+          Dành riêng cho Mẹ & Bố để mở quyền đăng bài, tải ảnh/video và chỉnh sửa nhật ký của bé.
+        </p>
+
+        <div v-if="adminLoginError" class="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs border border-red-200 flex items-center gap-1.5">
+          <span>⚠️</span>
+          <span>{{ adminLoginError }}</span>
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-stone-700 block">Mật khẩu quản trị:</label>
+          <input 
+            type="password" 
+            v-model="adminInput" 
+            @keyup.enter="loginAdmin" 
+            placeholder="Nhập mật khẩu của Mẹ/Bố..." 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:border-rose-400 focus:outline-hidden text-sm"
+            autofocus
+          >
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <button @click="openPasswordModal = true; openAdminModal = false" class="text-[11px] text-stone-400 hover:text-rose-600 underline">
+            Đổi mật khẩu?
+          </button>
+          <div class="flex gap-2">
+            <button @click="openAdminModal = false" class="px-3 py-1.5 text-xs text-stone-500 hover:bg-stone-100 rounded-xl">Hủy</button>
+            <button @click="loginAdmin" class="px-4 py-1.5 text-xs rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-xs">Mở khóa</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal: Settings -->
+    <!-- Modal: Change Password (Đổi Mật Khẩu Quản Trị) -->
+    <div v-if="openPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shadow-2xs">
+              🔑
+            </div>
+            <h3 class="font-bold text-stone-800 text-base">Đổi Mật Khẩu Quản Trị</h3>
+          </div>
+          <button @click="openPasswordModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+
+        <p class="text-xs text-stone-500">
+          Thiết lập mật khẩu riêng để bảo vệ quyền quản lý nhật ký của gia đình.
+        </p>
+
+        <div v-if="passwordError" class="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs border border-red-200">
+          ⚠️ {{ passwordError }}
+        </div>
+
+        <div v-if="passwordSuccess" class="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs border border-emerald-200 font-semibold">
+          ✅ {{ passwordSuccess }}
+        </div>
+
+        <form @submit.prevent="changePassword" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="font-semibold block mb-1 text-stone-700">Mật khẩu hiện tại *</label>
+            <input 
+              type="password" 
+              v-model="passwordForm.current" 
+              required 
+              placeholder="Nhập mật khẩu hiện tại (Mặc định: 123)" 
+              class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden text-xs"
+            >
+          </div>
+
+          <div>
+            <label class="font-semibold block mb-1 text-stone-700">Mật khẩu mới * (tối thiểu 4 ký tự)</label>
+            <input 
+              type="password" 
+              v-model="passwordForm.newPass" 
+              required 
+              placeholder="Nhập mật khẩu mới..." 
+              class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden text-xs"
+            >
+          </div>
+
+          <div>
+            <label class="font-semibold block mb-1 text-stone-700">Xác nhận mật khẩu mới *</label>
+            <input 
+              type="password" 
+              v-model="passwordForm.confirmPass" 
+              required 
+              placeholder="Nhập lại mật khẩu mới..." 
+              class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden text-xs"
+            >
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-stone-100">
+            <button type="button" @click="openPasswordModal = false" class="px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-xl">Hủy</button>
+            <button type="submit" class="px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold hover:from-rose-600 hover:to-pink-600 shadow-xs">
+              Lưu mật khẩu mới
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Settings (Cài đặt thông tin bé & Quản trị) -->
     <div v-if="openSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-3 text-xs sm:text-sm">
-        <h3 class="font-bold text-base text-stone-800">Cài đặt thông tin bé</h3>
-        <div>
-          <label class="block font-semibold mb-1">Tên bé (Nickname)</label>
-          <input type="text" v-model="profile.nickname" class="w-full p-2 rounded-xl border border-stone-200">
+      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 text-xs sm:text-sm">
+        <div class="flex items-center justify-between border-b border-rose-100 pb-3">
+          <h3 class="font-bold text-base text-stone-800">Cài đặt thông tin bé</h3>
+          <button @click="openSettingsModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
         </div>
+
         <div>
-          <label class="block font-semibold mb-1">Tên Bố & Mẹ</label>
-          <input type="text" v-model="profile.parentNames" class="w-full p-2 rounded-xl border border-stone-200">
+          <label class="block font-semibold mb-1 text-stone-700">Tên bé (Nickname)</label>
+          <input type="text" v-model="profile.nickname" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
         </div>
+
         <div>
-          <label class="block font-semibold mb-1">Ngày sinh</label>
-          <input type="date" v-model="profile.birthDate" class="w-full p-2 rounded-xl border border-stone-200">
+          <label class="block font-semibold mb-1 text-stone-700">Tên Bố & Mẹ</label>
+          <input type="text" v-model="profile.parentNames" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
         </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button @click="openSettingsModal = false; saveLocal()" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold">Lưu lại</button>
+
+        <div>
+          <label class="block font-semibold mb-1 text-stone-700">Ngày sinh</label>
+          <input type="date" v-model="profile.birthDate" class="w-full p-2.5 rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
+        </div>
+
+        <!-- Password section in settings -->
+        <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-900 flex items-center gap-1.5">
+              <span>🔒</span>
+              <span>Bảo mật Quản trị</span>
+            </span>
+            <button 
+              type="button" 
+              @click="openSettingsModal = false; openPasswordModal = true" 
+              class="px-2.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+            >
+              Đổi mật khẩu
+            </button>
+          </div>
+          <p class="text-[11px] text-amber-800/80 leading-relaxed">
+            Mật khẩu giúp ngăn người xem tự ý sửa hoặc xóa nhật ký. Bạn có thể đổi mật khẩu bất kỳ lúc nào.
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-stone-100">
+          <button @click="openSettingsModal = false" class="px-4 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-xl">Đóng</button>
+          <button @click="openSettingsModal = false; saveLocal(); alert('Đã lưu thông tin bé thành công!')" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-xs">
+            Lưu lại
+          </button>
         </div>
       </div>
     </div>
@@ -309,7 +455,8 @@
           parentNames: 'Mẹ Lan & Bố Hải',
           birthDate: '2025-05-18',
           avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=400&q=80',
-          gasUrl: ''
+          gasUrl: '',
+          adminPassword: '123'
         });
 
         const memories = ref([
@@ -359,7 +506,16 @@
         const openGasModal = ref(false);
         const openAdminModal = ref(false);
         const openSettingsModal = ref(false);
+        const openPasswordModal = ref(false);
         const adminInput = ref('');
+        const adminLoginError = ref('');
+        const passwordError = ref('');
+        const passwordSuccess = ref('');
+        const passwordForm = ref({
+          current: '',
+          newPass: '',
+          confirmPass: ''
+        });
         const tempGasUrl = ref('');
         const isSubmitting = ref(false);
 
@@ -427,7 +583,14 @@
           const m = localStorage.getItem('nhatky_standalone_memories');
           if (m) memories.value = JSON.parse(m);
           const p = localStorage.getItem('nhatky_standalone_profile');
-          if (p) profile.value = JSON.parse(p);
+          if (p) {
+            const parsed = JSON.parse(p);
+            profile.value = {
+              ...profile.value,
+              ...parsed,
+              adminPassword: parsed.adminPassword || '123'
+            };
+          }
           tempGasUrl.value = profile.value.gasUrl || '';
         };
 
@@ -538,13 +701,44 @@
         };
 
         const loginAdmin = () => {
-          if (adminInput.value === '123' || adminInput.value === '123456') {
+          adminLoginError.value = '';
+          const targetPass = profile.value.adminPassword || '123';
+          if (adminInput.value === targetPass || (targetPass === '123' && adminInput.value === '123456')) {
             isAdmin.value = true;
             openAdminModal.value = false;
             adminInput.value = '';
           } else {
-            alert('Mật khẩu mặc định là 123');
+            adminLoginError.value = 'Mật khẩu không chính xác. Vui lòng thử lại!';
           }
+        };
+
+        const changePassword = () => {
+          passwordError.value = '';
+          passwordSuccess.value = '';
+          const currentPass = profile.value.adminPassword || '123';
+
+          if (passwordForm.value.current !== currentPass) {
+            passwordError.value = 'Mật khẩu hiện tại không đúng!';
+            return;
+          }
+          if (!passwordForm.value.newPass || passwordForm.value.newPass.trim().length < 4) {
+            passwordError.value = 'Mật khẩu mới phải có ít nhất 4 ký tự!';
+            return;
+          }
+          if (passwordForm.value.newPass !== passwordForm.value.confirmPass) {
+            passwordError.value = 'Mật khẩu xác nhận không trùng khớp!';
+            return;
+          }
+
+          profile.value.adminPassword = passwordForm.value.newPass.trim();
+          saveLocal();
+          passwordSuccess.value = 'Đã đổi mật khẩu quản trị thành công!';
+          setTimeout(() => {
+            openPasswordModal.value = false;
+            passwordForm.value = { current: '', newPass: '', confirmPass: '' };
+            passwordSuccess.value = '';
+            passwordError.value = '';
+          }, 1200);
         };
 
         const logoutAdmin = () => {
@@ -573,7 +767,12 @@
           openGasModal,
           openAdminModal,
           openSettingsModal,
+          openPasswordModal,
           adminInput,
+          adminLoginError,
+          passwordError,
+          passwordSuccess,
+          passwordForm,
           tempGasUrl,
           formMemory,
           previewUrl,
@@ -591,6 +790,7 @@
           viewDetail,
           loginAdmin,
           logoutAdmin,
+          changePassword,
           saveGasUrl
         };
       }
