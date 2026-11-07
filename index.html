@@ -1,21 +1,600 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nhật Ký Mẹ & Bé - Hành Trình Yêu Thương</title>
-    <meta name="description" content="Ứng dụng lưu giữ và cập nhật hành trình làm mẹ cùng kỷ niệm của bé từ khi trong bụng mẹ đến từng cột mốc khôn lớn." />
-    <meta property="og:title" content="Nhật Ký Mẹ & Bé - Hành Trình Yêu Thương" />
-    <meta property="og:description" content="Ứng dụng lưu giữ và cập nhật hành trình làm mẹ cùng kỷ niệm của bé từ khi trong bụng mẹ đến từng cột mốc khôn lớn." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-[#FFF9F5] text-stone-700 antialiased font-sans selection:bg-rose-200 selection:text-rose-800">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhật Ký Mẹ & Bé - Hành Trình Yêu Thương</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Quicksand & Caveat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Quicksand:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Quicksand', sans-serif; }
+    .font-handwriting { font-family: 'Caveat', cursive; }
+  </style>
+  <!-- Vue.js 3 Production CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body class="bg-[#FFF9F5] text-stone-700 antialiased selection:bg-rose-200 selection:text-rose-800 min-h-screen">
+  <div id="app" class="flex flex-col min-h-screen">
+    
+    <!-- Top Sticky Header -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-xs">
+      <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-400 to-pink-300 flex items-center justify-center text-white shadow-xs">
+            ❤️
+          </div>
+          <div>
+            <h1 class="font-bold text-base sm:text-lg text-stone-800 leading-tight">Nhật Ký Mẹ & Bé</h1>
+            <p class="text-xs text-rose-500 font-medium hidden sm:block">Hành trình yêu thương của {{ profile.nickname }}</p>
+          </div>
+        </div>
 
+        <div class="flex items-center gap-2">
+          <!-- GAS status button -->
+          <button @click="openGasModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors"
+            :class="profile.gasUrl ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
+            <span class="w-2 h-2 rounded-full" :class="profile.gasUrl ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"></span>
+            <span>{{ profile.gasUrl ? 'Google Sheets: Kết nối' : 'Kết nối Google Sheets' }}</span>
+          </button>
+
+          <!-- Add memory button -->
+          <button @click="openAddMemoryModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs sm:text-sm font-bold shadow-xs hover:from-rose-600 hover:to-pink-600 transition-all">
+            + Thêm kỷ niệm
+          </button>
+
+          <!-- Admin Lock / Unlock -->
+          <button v-if="isAdmin" @click="logoutAdmin" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+            🔓 Mẹ & Bố
+          </button>
+          <button v-else @click="openAdminModal = true" class="px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 text-xs font-medium">
+            🔒 Quản trị
+          </button>
+
+          <!-- Settings -->
+          <button @click="openSettingsModal = true" class="p-2 rounded-xl text-stone-500 hover:bg-stone-100" title="Cài đặt">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
+      
+      <!-- Baby Info & Age Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-50 via-amber-50/50 to-teal-50/50 border border-rose-100 p-6 sm:p-8 shadow-xs">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div class="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-rose-400 to-amber-300 shadow-md">
+              <img :src="profile.avatar" class="w-full h-full object-cover rounded-full bg-white" alt="Avatar">
+            </div>
+            <div class="space-y-1">
+              <span class="px-3 py-1 rounded-full bg-white text-rose-600 border border-rose-200 text-xs font-semibold inline-block">
+                {{ profile.parentNames }}
+              </span>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-stone-800">{{ profile.nickname }}</h2>
+              <p class="text-stone-600 font-handwriting text-lg text-rose-500">"Từng ngày con lớn lên là từng ngày ngập tràn phép màu"</p>
+              <div class="text-xs text-stone-500">Ngày sinh: {{ formatDate(profile.birthDate) }}</div>
+            </div>
+          </div>
+
+          <!-- Age Box -->
+          <div class="bg-white/95 rounded-2xl p-4 border border-rose-200 shadow-xs text-center sm:text-right min-w-[220px]">
+            <div class="text-xs font-bold text-rose-500 uppercase tracking-wide">Tuổi của bé hiện tại</div>
+            <div class="text-2xl font-black text-stone-800 mt-1">{{ calculatedAge.formatted }}</div>
+            <div class="text-xs text-stone-500 mt-0.5">({{ calculatedAge.totalDays }} ngày đồng hành cùng mẹ)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-rose-100 shadow-2xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button @click="currentStage = 'all'" :class="currentStage === 'all' ? 'bg-rose-500 text-white font-bold' : 'bg-rose-50 text-stone-600'" class="px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all">
+              Tất cả ({{ memories.length }})
+            </button>
+            <button @click="currentStage = 'pregnancy'" :class="currentStage === 'pregnancy' ? 'bg-teal-600 text-white font-bold' : 'bg-teal-50 text-teal-800'" class="px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all">
+              🤰 Thai kỳ
+            </button>
+            <button @click="currentStage = 'milestones'" :class="currentStage === 'milestones' ? 'bg-pink-500 text-white font-bold' : 'bg-pink-50 text-pink-800'" class="px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all">
+              👶 Cột mốc bé
+            </button>
+            <button @click="currentStage = 'daily'" :class="currentStage === 'daily' ? 'bg-amber-500 text-white font-bold' : 'bg-amber-50 text-amber-800'" class="px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all">
+              📖 Hằng ngày
+            </button>
+          </div>
+
+          <input type="text" v-model="searchQuery" placeholder="Tìm kiếm kỷ niệm..." class="w-full sm:w-64 px-3.5 py-1.5 text-xs rounded-xl border border-stone-200 focus:border-rose-400 focus:outline-hidden">
+        </div>
+      </div>
+
+      <!-- Timeline Cards -->
+      <div v-if="filteredMemories.length === 0" class="bg-white rounded-3xl p-8 text-center text-stone-500 border border-rose-100">
+        Chưa có kỷ niệm nào phù hợp. Hãy thêm kỷ niệm mới!
+      </div>
+      
+      <div v-else class="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-[11px] sm:before:left-[15px] before:top-4 before:bottom-4 before:w-[2px] before:bg-rose-200">
+        <div v-for="mem in filteredMemories" :key="mem.id" class="relative group">
+          <div class="absolute -left-[27px] sm:-left-[31px] top-6 w-5 h-5 rounded-full bg-white border-4 border-rose-400 shadow-xs"></div>
+
+          <!-- Card -->
+          <div class="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-2xs hover:shadow-md transition-all">
+            <div class="p-4 sm:p-5 pb-3 flex items-center justify-between border-b border-rose-50">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                  :class="mem.stage === 'pregnancy' ? 'bg-teal-50 text-teal-700' : (mem.stage === 'milestones' ? 'bg-pink-50 text-pink-700' : 'bg-amber-50 text-amber-700')">
+                  {{ mem.stage === 'pregnancy' ? '🤰 Thai kỳ' : (mem.stage === 'milestones' ? '👶 Cột mốc' : '📖 Hằng ngày') }}
+                </span>
+                <span v-if="mem.milestoneTag" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-600">
+                  ✨ {{ mem.milestoneTag }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-stone-400">
+                <span>{{ formatDate(mem.date) }}</span>
+                <div v-if="isAdmin" class="flex items-center gap-1 pl-2 border-l border-stone-100">
+                  <button @click="editMemory(mem)" class="text-stone-400 hover:text-rose-600 p-1">✏️</button>
+                  <button @click="deleteMemory(mem.id)" class="text-stone-400 hover:text-red-600 p-1">🗑️</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Media Preview -->
+            <div v-if="mem.mediaType !== 'none' && mem.mediaUrl" @click="viewDetail(mem)" class="cursor-pointer max-h-96 overflow-hidden bg-stone-900 flex items-center justify-center">
+              <video v-if="mem.mediaType === 'video'" :src="mem.mediaUrl" controls class="max-h-96 w-full object-contain"></video>
+              <img v-else :src="mem.mediaUrl" :alt="mem.title" class="w-full max-h-96 object-cover hover:scale-105 transition-transform duration-300">
+            </div>
+
+            <div class="p-4 sm:p-5">
+              <h3 @click="viewDetail(mem)" class="text-base sm:text-lg font-bold text-stone-800 hover:text-rose-600 cursor-pointer">
+                {{ mem.title }}
+              </h3>
+              <p class="text-sm text-stone-600 mt-2 whitespace-pre-line leading-relaxed">{{ mem.content }}</p>
+
+              <div class="mt-4 pt-3 border-t border-rose-50 flex items-center justify-between">
+                <div class="flex flex-wrap gap-1.5">
+                  <span v-for="emo in (mem.emotions || [])" :key="emo" class="px-2 py-0.5 rounded-lg bg-pink-50 text-pink-700 text-xs font-semibold">
+                    {{ emo }}
+                  </span>
+                </div>
+                <button @click="mem.likes = (mem.likes || 0) + 1; saveLocal()" class="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1">
+                  ❤️ {{ mem.likes || 0 }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Modal: Add / Edit Memory -->
+    <div v-if="showAddEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-rose-100 overflow-hidden my-6">
+        <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+          <h3 class="font-bold text-stone-800">{{ formMemory.id ? 'Sửa kỷ niệm' : 'Thêm kỷ niệm mới' }}</h3>
+          <button @click="showAddEditModal = false" class="text-stone-400 hover:text-stone-700">✕</button>
+        </div>
+        <form @submit.prevent="submitMemory" class="p-5 space-y-3 max-h-[75vh] overflow-y-auto text-xs sm:text-sm">
+          <div>
+            <label class="font-bold block mb-1">Giai đoạn</label>
+            <select v-model="formMemory.stage" class="w-full p-2 rounded-xl border border-stone-200">
+              <option value="pregnancy">🤰 Thai kỳ</option>
+              <option value="milestones">👶 Cột mốc bé</option>
+              <option value="daily">📖 Hằng ngày</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="font-bold block mb-1">Ngày ghi nhớ</label>
+              <input type="date" v-model="formMemory.date" required class="w-full p-2 rounded-xl border border-stone-200">
+            </div>
+            <div>
+              <label class="font-bold block mb-1">Cột mốc / Tuần tuổi</label>
+              <input type="text" v-model="formMemory.milestoneTag" placeholder="VD: Tuần 12, Biết lẫy" class="w-full p-2 rounded-xl border border-stone-200">
+            </div>
+          </div>
+
+          <div>
+            <label class="font-bold block mb-1">Tiêu đề *</label>
+            <input type="text" v-model="formMemory.title" required placeholder="Nhập tiêu đề kỷ niệm" class="w-full p-2 rounded-xl border border-stone-200">
+          </div>
+
+          <div>
+            <label class="font-bold block mb-1">Nội dung nhật ký</label>
+            <textarea rows="3" v-model="formMemory.content" placeholder="Tâm sự của mẹ..." class="w-full p-2 rounded-xl border border-stone-200"></textarea>
+          </div>
+
+          <!-- File Upload Base64 -->
+          <div class="p-3 rounded-2xl bg-rose-50/50 border border-dashed border-rose-200 text-center">
+            <label class="cursor-pointer block">
+              <span class="font-bold text-rose-600 block">📷 Chọn ảnh hoặc video từ máy</span>
+              <span class="text-xs text-stone-400">Tự động chuyển Base64 và tải lên Google Drive</span>
+              <input type="file" @change="handleFileChange" accept="image/*,video/*" class="hidden">
+            </label>
+            <div v-if="previewUrl" class="mt-2 text-xs text-stone-600 font-semibold truncate">
+              Đã chọn: {{ fileName }}
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end gap-2">
+            <button type="button" @click="showAddEditModal = false" class="px-4 py-2 rounded-xl text-stone-500">Hủy</button>
+            <button type="submit" :disabled="isSubmitting" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 disabled:opacity-50">
+              {{ isSubmitting ? 'Đang lưu...' : 'Lưu kỷ niệm' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: View Detail -->
+    <div v-if="selectedMem" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden">
+        <div v-if="selectedMem.mediaUrl" class="bg-stone-900 max-h-96 flex items-center justify-center">
+          <video v-if="selectedMem.mediaType === 'video'" :src="selectedMem.mediaUrl" controls class="max-h-96 w-full object-contain"></video>
+          <img v-else :src="selectedMem.mediaUrl" class="max-h-96 w-full object-contain">
+        </div>
+        <div class="p-6 space-y-3">
+          <div class="flex justify-between items-center text-xs text-stone-400">
+            <span>{{ formatDate(selectedMem.date) }}</span>
+            <button @click="selectedMem = null" class="text-lg">✕</button>
+          </div>
+          <h2 class="text-xl font-bold text-stone-800">{{ selectedMem.title }}</h2>
+          <p class="text-stone-600 whitespace-pre-line text-sm">{{ selectedMem.content }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: GAS Configuration -->
+    <div v-if="openGasModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+        <h3 class="font-bold text-base text-stone-800">Cấu hình Google Apps Script</h3>
+        <p class="text-xs text-stone-600">Dán Web App URL (có đuôi /exec) từ Apps Script đã deploy để đồng bộ tự động với Google Sheets và Google Drive:</p>
+        <input type="url" v-model="tempGasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 rounded-xl border border-stone-200 text-xs font-mono">
+        <div class="flex justify-end gap-2 pt-2">
+          <button @click="openGasModal = false" class="px-4 py-2 text-xs rounded-xl text-stone-600">Đóng</button>
+          <button @click="saveGasUrl" class="px-4 py-2 text-xs rounded-xl bg-rose-500 text-white font-bold">Lưu cấu hình</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Admin Auth -->
+    <div v-if="openAdminModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-3">
+        <h3 class="font-bold text-stone-800">Mở khóa Quản trị</h3>
+        <p class="text-xs text-stone-500">Nhập mật khẩu (Mặc định: 123):</p>
+        <input type="password" v-model="adminInput" @keyup.enter="loginAdmin" placeholder="Nhập 123" class="w-full p-2 rounded-xl border border-stone-200 text-sm">
+        <div class="flex justify-end gap-2 pt-2">
+          <button @click="openAdminModal = false" class="px-3 py-1.5 text-xs text-stone-500">Hủy</button>
+          <button @click="loginAdmin" class="px-4 py-1.5 text-xs rounded-xl bg-rose-500 text-white font-bold">Đăng nhập</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Settings -->
+    <div v-if="openSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-3 text-xs sm:text-sm">
+        <h3 class="font-bold text-base text-stone-800">Cài đặt thông tin bé</h3>
+        <div>
+          <label class="block font-semibold mb-1">Tên bé (Nickname)</label>
+          <input type="text" v-model="profile.nickname" class="w-full p-2 rounded-xl border border-stone-200">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Tên Bố & Mẹ</label>
+          <input type="text" v-model="profile.parentNames" class="w-full p-2 rounded-xl border border-stone-200">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Ngày sinh</label>
+          <input type="date" v-model="profile.birthDate" class="w-full p-2 rounded-xl border border-stone-200">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button @click="openSettingsModal = false; saveLocal()" class="px-5 py-2 rounded-xl bg-rose-500 text-white font-bold">Lưu lại</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const profile = ref({
+          nickname: 'Bé Xù',
+          parentNames: 'Mẹ Lan & Bố Hải',
+          birthDate: '2025-05-18',
+          avatar: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=400&q=80',
+          gasUrl: ''
+        });
+
+        const memories = ref([
+          {
+            id: '1',
+            date: '2026-05-18',
+            title: 'Thôi nôi tròn 1 tuổi & Bước đi đầu tiên! 🎂',
+            content: 'Hôm nay công chúa nhỏ của mẹ tròn 1 tuổi. Con đã chập chững bước 5 bước vào vòng tay bố mẹ!',
+            stage: 'milestones',
+            milestoneTag: 'Sinh nhật 1 tuổi',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=80',
+            emotions: ['Hạnh phúc ❤️', 'Xúc động 🥹'],
+            likes: 12
+          },
+          {
+            id: '2',
+            date: '2025-08-28',
+            title: '3 tháng 10 ngày - Con biết lẫy tròn vo! 🎉',
+            content: 'Chiều nay con úp cái bụng tròn xuống thảm rồi ngẩng đầu cười toe toét nhìn mẹ.',
+            stage: 'milestones',
+            milestoneTag: 'Biết lẫy',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=800&q=80',
+            emotions: ['Tự hào 🌟'],
+            likes: 8
+          },
+          {
+            id: '3',
+            date: '2024-11-12',
+            title: 'Tuần 12: Siêu âm độ mờ da gáy - Bàn tay bé xíu 👋',
+            content: 'Con ngọ nguậy giơ bàn tay nhỏ xíu lên chào mẹ. Kết quả khỏe mạnh, mẹ thở phào nhẹ nhõm!',
+            stage: 'pregnancy',
+            milestoneTag: 'Siêu âm 12 tuần',
+            mediaType: 'image',
+            mediaUrl: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?auto=format&fit=crop&w=800&q=80',
+            emotions: ['Kỳ diệu ✨'],
+            likes: 15
+          }
+        ]);
+
+        const isAdmin = ref(false);
+        const currentStage = ref('all');
+        const searchQuery = ref('');
+        const showAddEditModal = ref(false);
+        const selectedMem = ref(null);
+        const openGasModal = ref(false);
+        const openAdminModal = ref(false);
+        const openSettingsModal = ref(false);
+        const adminInput = ref('');
+        const tempGasUrl = ref('');
+        const isSubmitting = ref(false);
+
+        const formMemory = ref({
+          id: '',
+          stage: 'milestones',
+          date: new Date().toISOString().split('T')[0],
+          title: '',
+          content: '',
+          milestoneTag: '',
+          mediaType: 'none',
+          mediaUrl: ''
+        });
+
+        const fileBase64 = ref('');
+        const fileName = ref('');
+        const previewUrl = ref('');
+
+        const calculatedAge = computed(() => {
+          if (!profile.value.birthDate) return { formatted: '---', totalDays: 0 };
+          const birth = new Date(profile.value.birthDate);
+          const now = new Date();
+          let years = now.getFullYear() - birth.getFullYear();
+          let months = now.getMonth() - birth.getMonth();
+          let days = now.getDate() - birth.getDate();
+          if (days < 0) {
+            months--;
+            days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+          }
+          if (months < 0) {
+            years--;
+            months += 12;
+          }
+          const totalDays = Math.floor(Math.abs(now - birth) / (1000 * 60 * 60 * 24));
+          const parts = [];
+          if (years > 0) parts.push(years + ' tuổi');
+          if (months > 0) parts.push(months + ' tháng');
+          parts.push(days + ' ngày');
+          return { formatted: parts.join(' '), totalDays };
+        });
+
+        const filteredMemories = computed(() => {
+          return memories.value.filter(m => {
+            if (currentStage.value !== 'all' && m.stage !== currentStage.value) return false;
+            if (searchQuery.value) {
+              const q = searchQuery.value.toLowerCase();
+              return m.title.toLowerCase().includes(q) || m.content.toLowerCase().includes(q);
+            }
+            return true;
+          });
+        });
+
+        const formatDate = (str) => {
+          if (!str) return '';
+          const d = new Date(str);
+          return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        };
+
+        const saveLocal = () => {
+          localStorage.setItem('nhatky_standalone_memories', JSON.stringify(memories.value));
+          localStorage.setItem('nhatky_standalone_profile', JSON.stringify(profile.value));
+        };
+
+        const loadLocal = () => {
+          const m = localStorage.getItem('nhatky_standalone_memories');
+          if (m) memories.value = JSON.parse(m);
+          const p = localStorage.getItem('nhatky_standalone_profile');
+          if (p) profile.value = JSON.parse(p);
+          tempGasUrl.value = profile.value.gasUrl || '';
+        };
+
+        const openAddMemoryModal = () => {
+          formMemory.value = {
+            id: '',
+            stage: 'milestones',
+            date: new Date().toISOString().split('T')[0],
+            title: '',
+            content: '',
+            milestoneTag: '',
+            mediaType: 'none',
+            mediaUrl: ''
+          };
+          fileBase64.value = '';
+          fileName.value = '';
+          previewUrl.value = '';
+          showAddEditModal.value = true;
+        };
+
+        const editMemory = (mem) => {
+          formMemory.value = { ...mem };
+          fileBase64.value = '';
+          fileName.value = '';
+          previewUrl.value = mem.mediaUrl || '';
+          showAddEditModal.value = true;
+        };
+
+        const deleteMemory = async (id) => {
+          if (!confirm('Bạn có chắc muốn xóa kỷ niệm này?')) return;
+          if (profile.value.gasUrl) {
+            try {
+              await fetch(profile.value.gasUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'deleteMemory', id })
+              });
+            } catch(e){}
+          }
+          memories.value = memories.value.filter(m => m.id !== id);
+          saveLocal();
+        };
+
+        const handleFileChange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          fileName.value = file.name;
+          const reader = new FileReader();
+          reader.onload = () => {
+            fileBase64.value = reader.result;
+            previewUrl.value = reader.result;
+            formMemory.value.mediaType = file.type.includes('video') ? 'video' : 'image';
+            formMemory.value.mediaUrl = reader.result;
+          };
+          reader.readAsDataURL(file);
+        };
+
+        const submitMemory = async () => {
+          try {
+            isSubmitting.value = true;
+            if (profile.value.gasUrl) {
+              const payload = {
+                action: formMemory.value.id ? 'updateMemory' : 'createMemory',
+                id: formMemory.value.id,
+                date: formMemory.value.date,
+                title: formMemory.value.title,
+                content: formMemory.value.content,
+                stage: formMemory.value.stage,
+                milestoneTag: formMemory.value.milestoneTag,
+                mediaType: formMemory.value.mediaType,
+                mediaUrl: formMemory.value.mediaUrl,
+                fileBase64: fileBase64.value,
+                fileName: fileName.value
+              };
+              const res = await fetch(profile.value.gasUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+              });
+              const json = await res.json();
+              if (json.newMemory) {
+                memories.value.unshift(json.newMemory);
+              }
+            } else {
+              if (formMemory.value.id) {
+                const idx = memories.value.findIndex(m => m.id === formMemory.value.id);
+                if (idx !== -1) memories.value[idx] = { ...formMemory.value };
+              } else {
+                memories.value.unshift({
+                  ...formMemory.value,
+                  id: 'mem_' + Date.now(),
+                  emotions: ['Hạnh phúc ❤️'],
+                  likes: 0
+                });
+              }
+            }
+            saveLocal();
+            showAddEditModal.value = false;
+          } catch(err) {
+            alert('Lỗi khi lưu bài viết: ' + err.message);
+          } finally {
+            isSubmitting.value = false;
+          }
+        };
+
+        const viewDetail = (mem) => {
+          selectedMem.value = mem;
+        };
+
+        const loginAdmin = () => {
+          if (adminInput.value === '123' || adminInput.value === '123456') {
+            isAdmin.value = true;
+            openAdminModal.value = false;
+            adminInput.value = '';
+          } else {
+            alert('Mật khẩu mặc định là 123');
+          }
+        };
+
+        const logoutAdmin = () => {
+          isAdmin.value = false;
+        };
+
+        const saveGasUrl = () => {
+          profile.value.gasUrl = tempGasUrl.value.trim();
+          saveLocal();
+          openGasModal.value = false;
+          alert('Đã lưu Google Apps Script Web App URL!');
+        };
+
+        onMounted(() => {
+          loadLocal();
+        });
+
+        return {
+          profile,
+          memories,
+          isAdmin,
+          currentStage,
+          searchQuery,
+          showAddEditModal,
+          selectedMem,
+          openGasModal,
+          openAdminModal,
+          openSettingsModal,
+          adminInput,
+          tempGasUrl,
+          formMemory,
+          previewUrl,
+          fileName,
+          isSubmitting,
+          calculatedAge,
+          filteredMemories,
+          formatDate,
+          saveLocal,
+          openAddMemoryModal,
+          editMemory,
+          deleteMemory,
+          handleFileChange,
+          submitMemory,
+          viewDetail,
+          loginAdmin,
+          logoutAdmin,
+          saveGasUrl
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
