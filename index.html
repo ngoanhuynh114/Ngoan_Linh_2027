@@ -649,6 +649,15 @@
       <button @click="toastMessage = ''" class="ml-2 text-white/70 hover:text-white font-bold">✕</button>
     </div>
 
+    <!-- Nút bật/tắt nhạc nền -->
+    <button
+      @click="toggleMusic"
+      class="fixed bottom-5 left-5 z-40 w-11 h-11 rounded-full bg-white/90 border border-rose-200 shadow-lg text-xl flex items-center justify-center hover:bg-rose-50 transition-colors"
+      :title="musicOn ? 'Tắt nhạc' : 'Bật nhạc'"
+    >
+      <span :class="musicOn ? 'animate-pulse' : 'opacity-50'">{{ musicOn ? '🎵' : '🔇' }}</span>
+    </button>
+
   </div>
 
   <script>
@@ -1284,7 +1293,53 @@
           }
         };
 
+        // ===== NHẠC NỀN =====
+        const MUSIC_URL = './music/nhac-nen.mp3';
+        const bgMusic = new Audio(MUSIC_URL);
+        bgMusic.loop = true;      // lặp lại bài hát
+        bgMusic.volume = 0.5;     // âm lượng từ 0 đến 1
+        const musicOn = ref(false);
+        let userMutedMusic = false;
+        try { userMutedMusic = localStorage.getItem('nhatky_music_off') === '1'; } catch (e) {}
+
+        const startMusic = async () => {
+          try {
+            await bgMusic.play();
+            musicOn.value = true;
+            return true;
+          } catch (e) {
+            musicOn.value = false;
+            return false;
+          }
+        };
+
+        const toggleMusic = async () => {
+          if (musicOn.value) {
+            bgMusic.pause();
+            musicOn.value = false;
+            userMutedMusic = true;
+          } else {
+            userMutedMusic = false;
+            await startMusic();
+          }
+          try { localStorage.setItem('nhatky_music_off', userMutedMusic ? '1' : '0'); } catch (e) {}
+        };
+
+        const setupAutoMusic = () => {
+          if (userMutedMusic) return; // người xem đã chủ động tắt nhạc ở lần trước
+          startMusic(); // thử phát ngay; nếu trình duyệt chặn thì chờ lần chạm đầu tiên
+          const events = ['click', 'pointerup', 'keydown', 'touchend'];
+          const removeAll = () => events.forEach(ev => window.removeEventListener(ev, onFirstTouch));
+          const onFirstTouch = async () => {
+            if (userMutedMusic) { removeAll(); return; }
+            if (musicOn.value || await startMusic()) removeAll();
+          };
+          events.forEach(ev => window.addEventListener(ev, onFirstTouch));
+        };
+
         onMounted(async () => {
+          setupAutoMusic();
+
           // 1. Nạp dữ liệu local (nếu trình duyệt này đã lưu)
           loadLocal();
 
@@ -1371,6 +1426,8 @@
           viewDetail,
           loginAdmin,
           isDefaultPass,
+          musicOn,
+          toggleMusic,
           logoutAdmin,
           changePassword,
           saveGasUrl
