@@ -19,6 +19,75 @@ var SHEET_NAME = "NhatKy";
 
 var PROFILE_SHEET_NAME = "CauHinh";
 
+// ===== MẬT KHẨU QUẢN TRỊ (lưu dạng băm trong Script Properties, không trả về trình duyệt) =====
+var DEFAULT_ADMIN_PASSWORD = "123";   // Chỉ dùng cho tới khi bạn đổi mật khẩu lần đầu
+var MAX_FAILED_LOGINS = 5;            // Sai quá số lần này sẽ bị khóa tạm thời
+var LOCK_SECONDS = 600;               // Thời gian khóa: 10 phút
+
+function hashPassword_(salt, password) {
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    salt + ":" + password,
+    Utilities.Charset.UTF_8
+  );
+  return bytes.map(function (b) {
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? "0" + v : v;
+  }).join("");
+}
+
+function isDefaultPassword_() {
+  return !PropertiesService.getScriptProperties().getProperty("ADMIN_PASS_HASH");
+}
+
+function checkAdminPassword_(password) {
+  var props = PropertiesService.getScriptProperties();
+  var hash = props.getProperty("ADMIN_PASS_HASH");
+  var salt = props.getProperty("ADMIN_PASS_SALT");
+  var input = String(password || "");
+  if (!hash || !salt) return input === DEFAULT_ADMIN_PASSWORD;
+  return hashPassword_(salt, input) === hash;
+}
+
+function setAdminPassword_(newPassword) {
+  var salt = Utilities.getUuid();
+  PropertiesService.getScriptProperties().setProperties({
+    ADMIN_PASS_SALT: salt,
+    ADMIN_PASS_HASH: hashPassword_(salt, String(newPassword))
+  });
+}
+
+// Kiểm tra mật khẩu, có giới hạn số lần nhập sai
+function authorize_(password) {
+  var cache = CacheService.getScriptCache();
+  var fails = Number(cache.get("admin_fails") || 0);
+  if (fails >= MAX_FAILED_LOGINS) return { ok: false, locked: true };
+  if (checkAdminPassword_(password)) {
+    cache.remove("admin_fails");
+    return { ok: true };
+  }
+  cache.put("admin_fails", String(fails + 1), LOCK_SECONDS);
+  return { ok: false, locked: false };
+}
+
+function unauthorizedResponse_(auth) {
+  return createJsonResponse({
+    status: "error",
+    code: auth.locked ? "locked" : "unauthorized",
+    message: auth.locked
+      ? "Nhập sai quá nhiều lần. Vui lòng thử lại sau 10 phút."
+      : "Mật khẩu quản trị không chính xác."
+  });
+}
+
+// Chạy THỦ CÔNG trong trình soạn thảo Apps Script nếu quên mật khẩu (đưa về mặc định 123)
+function resetAdminPassword() {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty("ADMIN_PASS_HASH");
+  props.deleteProperty("ADMIN_PASS_SALT");
+  CacheService.getScriptCache().remove("admin_fails");
+}
+
 // Danh sách tiêu đề các cột trong Google Sheet
 var SHEET_HEADERS = [
   "ID",
@@ -79,7 +148,7 @@ function getProfileData() {
     var data = sheet.getDataRange().getValues();
     var profile = {};
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0]) {
+      if (data[i][0] && String(data[i][0]) !== "adminPassword") {
         profile[String(data[i][0])] = String(data[i][1] || "");
       }
     }
@@ -101,7 +170,7 @@ function saveProfileData(profileObj) {
     rowMap[String(existingData[i][0])] = i + 1;
   }
 
-  var keys = ["nickname", "parentNames", "birthDate", "avatar", "adminPassword"];
+  var keys = ["nickname", "parentNames", "birthDate", "avatar"];
   for (var k = 0; k < keys.length; k++) {
     var key = keys[k];
     if (profileObj[key] !== undefined && profileObj[key] !== null) {
@@ -235,6 +304,32 @@ function doPost(e) {
     }
 
     var action = requestData.action || "createMemory";
+
+    // A. ĐĂNG NHẬP QUẢN TRỊ (kiểm tra mật khẩu ngay trên máy chủ)
+    if (action === "verifyAdmin") {
+      var authLogin = authorize_(requestData.adminPassword);
+      if (!authLogin.ok) return unauthorizedResponse_(authLogin);
+      return createJsonResponse({ status: "success", isDefaultPassword: isDefaultPassword_() });
+    }
+
+    // B. ĐỔI MẬT KHẨU QUẢN TRỊ
+    if (action === "changeAdminPassword") {
+      var authChange = authorize_(requestData.currentPassword);
+      if (!authChange.ok) return unauthorizedResponse_(authChange);
+      var newPass = String(requestData.newPassword || "").trim();
+      if (newPass.length < 4) {
+        return createJsonResponse({ status: "error", message: "Mật khẩu mới phải có ít nhất 4 ký tự!" });
+      }
+      setAdminPassword_(newPass);
+      return createJsonResponse({ status: "success", message: "Đã đổi mật khẩu quản trị thành công!" });
+    }
+
+    // C. MỌI THAO TÁC GHI DỮ LIỆU ĐỀU PHẢI CÓ MẬT KHẨU QUẢN TRỊ
+    var writeActions = ["saveProfile", "createMemory", "updateMemory", "deleteMemory"];
+    if (writeActions.indexOf(action) !== -1) {
+      var authWrite = authorize_(requestData.adminPassword);
+      if (!authWrite.ok) return unauthorizedResponse_(authWrite);
+    }
 
     // 0. LƯU CẤU HÌNH HỒ SƠ BÉ VÀO GOOGLE SHEETS
     if (action === "saveProfile") {

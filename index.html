@@ -76,7 +76,7 @@
     </header>
 
     <!-- Security Warning Banner (Chỉ hiện khi Admin đăng nhập mà chưa đổi mật khẩu mặc định) -->
-    <div v-if="isAdmin && (profile.adminPassword === '123' || !profile.adminPassword)" class="bg-amber-100/90 border-b border-amber-300 px-4 py-2 text-xs text-amber-900 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
+    <div v-if="isAdmin && isDefaultPass" class="bg-amber-100/90 border-b border-amber-300 px-4 py-2 text-xs text-amber-900 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
       <div class="flex items-center gap-2">
         <span class="text-base">⚠️</span>
         <span><strong>Cảnh báo bảo mật:</strong> Mật khẩu quản trị của bạn đang là mặc định (123). Hãy đổi mật khẩu riêng để bảo vệ nhật ký của bé khỏi người lạ!</span>
@@ -666,7 +666,6 @@
           "dueDate": "2027-06-17",
           "avatar": "https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80",
           "quote": "Dành trọn yêu thương cho thiên thần nhỏ của Mẹ Linh & Bố Ngoãn (2027)",
-          "adminPassword": "123",
           "gasUrl": "https://script.google.com/macros/s/AKfycbxchZ3lgCdzufphWhML6_pUwYEbUk4Pg8z7FH_YEhF0-CfJG0CdvcnrnU7VMW_hCt6e/exec"
 });
 
@@ -733,6 +732,8 @@
         const toastType = ref('success');
 
         const adminInput = ref('');
+        const adminSecret = ref('');       // Mật khẩu trong phiên làm việc, chỉ giữ trong bộ nhớ, không lưu lại
+        const isDefaultPass = ref(false);  // true nếu vẫn dùng mật khẩu mặc định
         const adminLoginError = ref('');
         const passwordError = ref('');
         const passwordSuccess = ref('');
@@ -850,9 +851,9 @@
               const parsed = JSON.parse(p);
               profile.value = {
                 ...profile.value,
-                ...parsed,
-                adminPassword: parsed.adminPassword || '123'
+                ...parsed
               };
+              delete profile.value.adminPassword; // dọn mật khẩu cũ còn sót trong trình duyệt
             } catch(e){}
           }
           tempGasUrl.value = profile.value.gasUrl || '';
@@ -908,21 +909,21 @@
           if (profile.value.gasUrl) {
             try {
               showToast('Đang đồng bộ hồ sơ lên Google Sheets...', 'info');
-              await fetch(profile.value.gasUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                  action: 'saveProfile',
-                  profile: {
-                    nickname: profile.value.nickname,
-                    parentNames: profile.value.parentNames,
-                    birthDate: profile.value.birthDate,
-                    avatar: profile.value.avatar,
-                    adminPassword: profile.value.adminPassword
-                  }
-                })
+              const json = await postGas({
+                action: 'saveProfile',
+                adminPassword: adminSecret.value,
+                profile: {
+                  nickname: profile.value.nickname,
+                  parentNames: profile.value.parentNames,
+                  birthDate: profile.value.birthDate,
+                  avatar: profile.value.avatar
+                }
               });
-              showToast('Đã lưu hồ sơ bé lên Google Sheets thành công!');
+              if (json.status === 'success') {
+                showToast('Đã lưu hồ sơ bé lên Google Sheets thành công!');
+              } else {
+                showToast('Google Sheets: ' + (json.message || 'Không lưu được hồ sơ'), 'error');
+              }
             } catch(e) {
               console.warn('Lỗi lưu profile lên Google Sheets:', e);
             }
@@ -1000,6 +1001,7 @@
                 ...data.profile,
                 gasUrl: profile.value.gasUrl || data.profile.gasUrl || ''
               };
+              delete profile.value.adminPassword;
             }
             if (Array.isArray(data.memories)) {
               memories.value = data.memories;
@@ -1047,11 +1049,11 @@
           if (!confirm('Bạn có chắc muốn xóa kỷ niệm này?')) return;
           if (profile.value.gasUrl) {
             try {
-              await fetch(profile.value.gasUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'deleteMemory', id })
-              });
+              const json = await postGas({ action: 'deleteMemory', id, adminPassword: adminSecret.value });
+              if (json.code) {
+                showToast('Google Sheets: ' + (json.message || 'Không có quyền xóa'), 'error');
+                return;
+              }
             } catch(e){}
           }
           memories.value = memories.value.filter(m => m.id !== id);
@@ -1088,14 +1090,11 @@
                 mediaType: formMemory.value.mediaType,
                 mediaUrl: formMemory.value.mediaUrl,
                 fileBase64: fileBase64.value,
-                fileName: fileName.value
+                fileName: fileName.value,
+                adminPassword: adminSecret.value
               };
-              const res = await fetch(profile.value.gasUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-              });
-              const json = await res.json();
+              const json = await postGas(payload);
+              if (json.code) throw new Error(json.message || 'Không có quyền lưu dữ liệu');
               if (json.newMemory) {
                 memories.value.unshift(json.newMemory);
               }
@@ -1126,29 +1125,51 @@
           selectedMem.value = mem;
         };
 
-        const loginAdmin = () => {
+        // Gửi yêu cầu POST tới Google Apps Script và trả về kết quả JSON
+        const postGas = async (payload) => {
+          const url = (profile.value.gasUrl || DEFAULT_GAS_URL || '').trim();
+          if (!url) throw new Error('Chưa kết nối Google Sheets');
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+          return await res.json();
+        };
+
+        const loginAdmin = async () => {
           adminLoginError.value = '';
-          const targetPass = profile.value.adminPassword || '123';
-          if (adminInput.value === targetPass || (targetPass === '123' && adminInput.value === '123456')) {
-            isAdmin.value = true;
-            openAdminModal.value = false;
-            adminInput.value = '';
-            showToast('Đã đăng nhập quyền Quản trị!');
-          } else {
-            adminLoginError.value = 'Mật khẩu không chính xác. Vui lòng thử lại!';
+          if (!adminInput.value) {
+            adminLoginError.value = 'Vui lòng nhập mật khẩu!';
+            return;
+          }
+          try {
+            const json = await postGas({ action: 'verifyAdmin', adminPassword: adminInput.value });
+            if (json.status === 'success') {
+              adminSecret.value = adminInput.value;
+              isDefaultPass.value = !!json.isDefaultPassword;
+              isAdmin.value = true;
+              openAdminModal.value = false;
+              adminInput.value = '';
+              showToast('Đã đăng nhập quyền Quản trị!');
+            } else {
+              adminLoginError.value = json.message || 'Mật khẩu không chính xác. Vui lòng thử lại!';
+            }
+          } catch (err) {
+            adminLoginError.value = 'Không kết nối được Google Sheets nên chưa thể đăng nhập quản trị. Vui lòng kiểm tra mạng và thử lại!';
           }
         };
 
-        const changePassword = () => {
+        const changePassword = async () => {
           passwordError.value = '';
           passwordSuccess.value = '';
-          const currentPass = profile.value.adminPassword || '123';
 
-          if (passwordForm.value.current !== currentPass) {
-            passwordError.value = 'Mật khẩu hiện tại không đúng!';
+          if (!passwordForm.value.current) {
+            passwordError.value = 'Vui lòng nhập mật khẩu hiện tại!';
             return;
           }
-          if (!passwordForm.value.newPass || passwordForm.value.newPass.trim().length < 4) {
+          const newPass = (passwordForm.value.newPass || '').trim();
+          if (newPass.length < 4) {
             passwordError.value = 'Mật khẩu mới phải có ít nhất 4 ký tự!';
             return;
           }
@@ -1157,8 +1178,25 @@
             return;
           }
 
-          profile.value.adminPassword = passwordForm.value.newPass.trim();
-          saveLocal();
+          try {
+            const json = await postGas({
+              action: 'changeAdminPassword',
+              currentPassword: passwordForm.value.current,
+              newPassword: newPass
+            });
+            if (json.status !== 'success') {
+              passwordError.value = json.message || 'Không đổi được mật khẩu!';
+              return;
+            }
+          } catch (err) {
+            passwordError.value = 'Không kết nối được Google Sheets nên chưa thể đổi mật khẩu!';
+            return;
+          }
+
+          if (isAdmin.value) {
+            adminSecret.value = newPass;
+            isDefaultPass.value = false;
+          }
           passwordSuccess.value = 'Đã đổi mật khẩu quản trị thành công!';
           showToast('Đã đổi mật khẩu quản trị thành công!');
           setTimeout(() => {
@@ -1171,6 +1209,8 @@
 
         const logoutAdmin = () => {
           isAdmin.value = false;
+          adminSecret.value = '';
+          isDefaultPass.value = false;
           openSettingsModal.value = false;
           openGasModal.value = false;
           showAddEditModal.value = false;
@@ -1260,7 +1300,7 @@
               const remote = await res.json();
               if (remote.profile) {
                 // Không cho file tĩnh ghi đè gasUrl bằng giá trị rỗng
-                const { gasUrl: _ignored, ...remoteProfile } = remote.profile;
+                const { gasUrl: _g, adminPassword: _p, ...remoteProfile } = remote.profile;
                 profile.value = { ...profile.value, ...remoteProfile };
               }
               if (Array.isArray(remote.memories) && remote.memories.length > 0) {
@@ -1330,6 +1370,7 @@
           submitMemory,
           viewDetail,
           loginAdmin,
+          isDefaultPass,
           logoutAdmin,
           changePassword,
           saveGasUrl
